@@ -147,8 +147,11 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
 
 
     override fun initData() {
-        viewModel.getError().observe(this, Observer<java.lang.Exception> { e ->
+        viewModel.getError().observe(this, Observer<Throwable> { e ->
             LogUtils.e("发生异常", e)
+            if (swipeRefreshLayout.isRefreshing) {
+                swipeRefreshLayout.isRefreshing = false
+            }
         })
         viewModel.getFinally().observe(this, Observer<Int> {
             if (swipeRefreshLayout.isRefreshing) {
@@ -190,7 +193,7 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
                 }
             }
         })
-        val df = SimpleDateFormat("HH:mm") //设置日期格式
+        val df = SimpleDateFormat("HH:mm:ss") //设置日期格式
 
 
         var nowTime: Date?
@@ -200,14 +203,16 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
         try {
             nowTime = df.parse(df.format(Date()))
             //开盘时间区
-            beginTime = df.parse("9:30")
-            endTime = df.parse("15:00")
+            beginTime = df.parse("09:30:00")
+            endTime = df.parse("15:00:00")
             flag = DateUtils.belongCalendar(nowTime, beginTime, endTime);
         } catch (e: Exception) {
         }
         val timerTask = object : TimerTask() {
             override fun run() {
-                viewModel.refreshData()
+              runOnUiThread {
+                  viewModel.refreshData()
+              }
             }
         }
         if (flag) {

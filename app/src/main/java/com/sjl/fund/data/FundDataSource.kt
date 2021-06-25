@@ -35,4 +35,10 @@ interface FundDataSource {
      * @param fundInfo FundInfo
      */
     fun insertFund(fundInfo: FundInfo)
+
+    /**
+     *
+     * @return Int
+     */
+    fun getMaxSortId(): Int
 }

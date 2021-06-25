@@ -23,5 +23,7 @@ data class FundInfo(
         val gszzl: String,
         val gztime: String,
         val jzrq: String,
-        val name: String
+        val name: String,
+        var sortId: Int
 )
+

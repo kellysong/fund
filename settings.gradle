@@ -1,4 +1,4 @@
 include ':app'
-include ':my-kotlin'
+/*include ':my-kotlin'
 project (':my-kotlin').projectDir = new File('../my-kotlin')
-include ':my-kotlin:base-core-kotlin'
+include ':my-kotlin:base-core-kotlin'*/

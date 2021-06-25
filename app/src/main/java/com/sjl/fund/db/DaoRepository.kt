@@ -35,4 +35,8 @@ object DaoRepository {
     fun delete(fundcode: String) {
         dao.delete(fundcode)
     }
+
+    fun getMaxSortId(): Int {
+        return dao.getMaxSortId()
+    }
 }

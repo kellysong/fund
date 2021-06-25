@@ -22,11 +22,18 @@ class FundFromDb : FundDataSource {
     }
 
     override fun sortFund(data: MutableList<FundInfo>) {
+        data.forEachIndexed{index: Int, fundInfo: FundInfo ->
+            fundInfo.sortId = index;
+        }
         DaoRepository.insertList(data)
     }
 
     override fun insertFund(fundInfo: FundInfo) {
         DaoRepository.insert(fundInfo)
+    }
+
+    override fun getMaxSortId(): Int {
+        return DaoRepository.getMaxSortId()
     }
 
 }

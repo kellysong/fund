@@ -24,19 +24,19 @@ import com.sjl.fund.entity.FundInfo
 ], version = 1)
 abstract class FundDb : RoomDatabase() {
 
-    abstract val userLoginDao: FundInfoDao
+            abstract val userLoginDao: FundInfoDao
 
 
 
 
-    companion object {
+            companion object {
 
-        @Volatile
-        private var instance: FundDb? = null
+            @Volatile
+            private var instance: FundDb? = null
 
-        fun getInstance() = instance ?: synchronized(FundDb::class.java) {
-            instance ?: buildDatabase().also { instance = it }
-        }
+            fun getInstance() = instance ?: synchronized(FundDb::class.java) {
+                instance ?: buildDatabase().also { instance = it }
+            }
 
         private fun buildDatabase(): FundDb = Room.databaseBuilder(ViewUtils.getContext()
                 , FundDb::class.java, "fund.db")

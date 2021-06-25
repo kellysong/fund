@@ -64,4 +64,12 @@ class FundFromSp : FundDataSource {
         }
     }
 
+    /**
+     * sp下不支持
+     * @return Int
+     */
+    override fun getMaxSortId(): Int {
+       return 0
+    }
+
 }

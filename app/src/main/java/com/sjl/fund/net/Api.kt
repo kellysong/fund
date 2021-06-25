@@ -24,10 +24,15 @@ interface Api {
      * jsonpgz({"fundcode":"001970","name":"泰信鑫选灵活配置混合A","jzrq":"2021-04-09","dwjz":"1.1610","gsz":"1.1406","gszzl":"-1.76","gztime":"2021-04-12 15:00"});
      * @param code String
      * @param rt Long
-     * @return ResponseData<List<ArticleBean>>
+     * @return ResponseData<List<ArticleBean>> okhttp3.ResponseBody
      */
     @GET("http://fundgz.1234567.com.cn/js/{code}.js")
     fun getFundInfo(@Path("code") code: String, @Query("rt") rt: Long): Call<ResponseBody>
 
-
+    /**
+     * 所有基金名称列表代码
+     * @return Call<ResponseBody>
+     */
+    @GET("http://fund.eastmoney.com/js/fundcode_search.js")
+    fun searchFundList(): Call<ResponseBody>
 }

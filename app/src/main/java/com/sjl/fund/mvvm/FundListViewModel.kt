@@ -8,11 +8,9 @@ import com.sjl.core.kotlin.util.log.LogUtils
 import com.sjl.fund.data.FundDataSource
 import com.sjl.fund.data.FundFromDb
 import com.sjl.fund.data.FundFromSp
-import com.sjl.fund.db.DaoRepository
 import com.sjl.fund.entity.FundInfo
 import com.sjl.fund.net.ApiRepository
 import com.sjl.fund.net.RetrofitClient
-import com.sjl.fund.util.splitNotNull
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.map
@@ -22,11 +20,31 @@ import java.lang.IllegalArgumentException
 
 class FundListViewModel : BaseViewModel(), FundDataSource {
 
+    protected val errorGlobal by lazy { MutableLiveData<Throwable>() }
+
+    protected val finallyGlobal by lazy { MutableLiveData<Int>() }
+
+    /**
+     * 请求失败，出现异常
+     */
+    fun getError(): LiveData<Throwable> {
+        return errorGlobal
+    }
+
+    /**
+     * 请求完成，在此处做一些关闭操作
+     */
+    fun getFinally(): LiveData<Int> {
+        return finallyGlobal
+    }
+
     private val datas: MutableLiveData<FundInfo> by lazy {
         MutableLiveData<FundInfo>().also {
             loadDatas()
         }
     }
+
+
     val dataSourceType = 0
     val fundDataSource: FundDataSource by lazy {
 
@@ -55,6 +73,8 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
         }
         launchUI({
             LogUtils.i("基金数量：${listFundCodeList.size},\t$listFundCodeList")
+
+            var i = 0
             for (s in listFundCodeList) {
 
                 //方法一
@@ -70,13 +90,19 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
                   })
   */
                 //方法二：转为Flow
-                requestServer(s)
+
+                requestServer(s, i)
+                i++
 
             }
+        }, { e ->
+            errorGlobal.value = e
+        }, {
+            finallyGlobal.value = 200
         })
     }
 
-    private suspend fun requestServer(s: String) {
+    private suspend fun requestServer(s: String, i: Int) {
         ApiRepository.getFundInfo(s, System.currentTimeMillis())
                 .map {
                     val string = it.string()
@@ -92,6 +118,7 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
                         deleteFund(s)
                     }
                 }.collect {
+                    it.sortId = i
                     datas.value = it
                     insertFund(it)
                 }
@@ -123,13 +150,17 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
         fundDataSource.insertFund(fundInfo)
     }
 
+    override fun getMaxSortId(): Int {
+        return fundDataSource.getMaxSortId() + 1
+    }
+
 
     fun saveFundCode(text: String) {
         if (TextUtils.isEmpty(text)) {
             return
         }
         launchUI({
-            requestServer(text)
+            requestServer(text, getMaxSortId())
         })
     }
 
