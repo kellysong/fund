@@ -66,7 +66,7 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
 
     private fun loadDatas() {
         LogUtils.i("开始加载数据")
-        val listFundCodeList = fundDataSource.listFundCodeList()
+        val listFundCodeList = listFundInfos()
         if (listFundCodeList.isNullOrEmpty()) {
             finallyGlobal.value = 200
             return
@@ -74,8 +74,7 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
         launchUI({
             LogUtils.i("基金数量：${listFundCodeList.size},\t$listFundCodeList")
 
-            var i = 0
-            for (s in listFundCodeList) {
+            for ((index, value) in listFundCodeList.withIndex()) {
 
                 //方法一
                 /*  catchException({
@@ -91,8 +90,7 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
   */
                 //方法二：转为Flow
 
-                requestServer(s, i)
-                i++
+                requestServer(value.fundcode, value.sortId, value.holdFlag, value.holdMoney)
 
             }
         }, { e ->
@@ -102,8 +100,8 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
         })
     }
 
-    private suspend fun requestServer(s: String, i: Int) {
-        ApiRepository.getFundInfo(s, System.currentTimeMillis())
+    private suspend fun requestServer(fundCode: String, sortId: Int, holdFlag: Int, fundMoney: Double) {
+        ApiRepository.getFundInfo(fundCode, System.currentTimeMillis())
                 .map {
                     val string = it.string()
                     LogUtils.i("string:${string}")
@@ -113,12 +111,14 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
                     fundInfo
                 }.catch { e ->
                     // 异常处理
-                    LogUtils.e("s:${s},请求异常", e)
+                    LogUtils.e("s:${fundCode},请求异常", e)
                     if (e is HttpException && e.code() == 404) {
-                        deleteFund(s)
+                        deleteFund(fundCode)
                     }
                 }.collect {
-                    it.sortId = i
+                    it.sortId = sortId
+                    it.holdFlag = holdFlag
+                    it.holdMoney = fundMoney
                     datas.value = it
                     insertFund(it)
                 }
@@ -130,6 +130,10 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
     override fun listFundCodeList(): MutableList<String>? {
         val listFundCode = fundDataSource.listFundCodeList()
         return listFundCode
+    }
+
+    override fun listFundInfos(): MutableList<FundInfo>? {
+        return fundDataSource.listFundInfos()
     }
 
 
@@ -155,12 +159,12 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
     }
 
 
-    fun saveFundCode(text: String) {
-        if (TextUtils.isEmpty(text)) {
+    fun saveFundCode(fundCode: String, holdFlag: Int, fundMoney: Double) {
+        if (TextUtils.isEmpty(fundCode)) {
             return
         }
         launchUI({
-            requestServer(text, getMaxSortId())
+            requestServer(fundCode, getMaxSortId(), holdFlag, fundMoney)
         })
     }
 
@@ -171,6 +175,12 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
 
     fun sortData(data: MutableList<FundInfo>) {
         fundDataSource.sortFund(data)
+    }
+
+
+    fun update(fundInfo: FundInfo) {
+        insertFund(fundInfo)
+        datas.value = fundInfo
     }
 
 

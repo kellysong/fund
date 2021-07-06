@@ -6,6 +6,8 @@ import com.chad.library.adapter.base.module.DraggableModule
 import com.chad.library.adapter.base.viewholder.BaseViewHolder
 import com.sjl.fund.R
 import com.sjl.fund.entity.FundInfo
+import com.sjl.fund.util.MoneyUtils
+import java.math.BigDecimal
 
 /**
  * TODO
@@ -19,6 +21,8 @@ import com.sjl.fund.entity.FundInfo
 class FundListAdapter(data: List<FundInfo>?) : BaseQuickAdapter<FundInfo, BaseViewHolder>(R.layout.fund_list_recycle_item, data as MutableList<FundInfo>?), DraggableModule {
     override fun convert(baseViewHolder: BaseViewHolder, fundInfo: FundInfo) {
         with(baseViewHolder) {
+
+
             setText(R.id.tv_name, fundInfo.name)
                     .setText(R.id.tv_code,fundInfo.fundcode)
                     .setText(R.id.tv_code,fundInfo.fundcode)
@@ -28,12 +32,23 @@ class FundListAdapter(data: List<FundInfo>?) : BaseQuickAdapter<FundInfo, BaseVi
                     .setText(R.id.tv_gz_date,fundInfo.gztime)
                     .setText(R.id.tv_gz_v1,fundInfo.gsz)
                     .setText(R.id.tv_gz_v2,fundInfo.gszzl)
+                    .setGone(R.id.tv_hold,fundInfo.holdFlag == 0)
+            addChildClickViewIds(R.id.tv_name)
+            if (fundInfo.holdFlag == 0){
+                setGone(R.id.tv_money_title,true).setGone(R.id.tv_hold_money,true)
+            }else{
+                setGone(R.id.tv_money_title,false).setGone(R.id.tv_hold_money,false)
+                        .setText(R.id.tv_hold_money,MoneyUtils.formatMoney(fundInfo.holdMoney.toString(),2))
+            }
+//                    .setGone(R.id.tv_hold_money,fundInfo.holdFlag == 0)
         }
+
         if (fundInfo.gszzl.toDouble() > 0){
             baseViewHolder.setTextColor(R.id.tv_gz_v2,Color.RED)
         }else{
             baseViewHolder.setTextColor(R.id.tv_gz_v2,Color.GREEN)
 
         }
+
     }
 }

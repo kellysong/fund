@@ -2,15 +2,11 @@ package com.sjl.fund.mvvm
 
 
 import android.animation.ValueAnimator
-import android.content.Context
 import android.content.DialogInterface
 import android.graphics.Color
 import android.os.Build
-import android.text.InputFilter
-import android.text.InputFilter.LengthFilter
-import android.util.AttributeSet
 import android.view.View
-import android.view.inputmethod.EditorInfo
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
@@ -27,7 +23,9 @@ import com.sjl.fund.R
 import com.sjl.fund.adapter.FundListAdapter
 import com.sjl.fund.db.DaoRepository
 import com.sjl.fund.entity.FundInfo
+import com.sjl.fund.util.BaseClickListener
 import com.sjl.fund.util.DateUtils
+import com.sjl.fund.util.MoneyUtils
 import kotlinx.android.synthetic.main.fund_list_activity.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -94,6 +92,7 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
 
         recycleView.addItemDecoration(DividerItemDecoration(this, LinearLayout.VERTICAL))
         recycleView.adapter = createAdapter
+
     }
 
     override fun initListener() {
@@ -101,33 +100,103 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
             swipeRefreshLayout.isRefreshing = true
             viewModel.refreshData()
         }
-        createAdapter?.setOnItemClickListener { adapter, view, position ->
-            val builder = AlertDialog.Builder(FundListActivity@ this)
-            val temp = createAdapter!!.data.get(position)
-            builder.setTitle("删除基金").setMessage("确定删除该条目?")
-                    .setNegativeButton("取消", object : DialogInterface.OnClickListener {
-                        override fun onClick(dialog: DialogInterface, which: Int) {
-                            dialog.dismiss()
 
-                        }
-                    }).setPositiveButton("确定", object : DialogInterface.OnClickListener {
-                        override fun onClick(dialog: DialogInterface, which: Int) {
-                            viewModel.deleteFund(temp.fundcode)
-                            createAdapter?.remove(temp)
-                        }
-                    })
-            val create = builder.create()
-            create.show()
-            false
 
+        createAdapter?.apply {
+            setOnItemClickListener { adapter, view, position ->
+//                val builder = AlertDialog.Builder(FundListActivity@ this)
+                val builder = AlertDialog.Builder(this@FundListActivity)
+                val temp = createAdapter!!.data.get(position)
+                builder.setTitle("删除").setMessage("确定删除该条目("+temp.fundcode+")?")
+                        .setNegativeButton("取消", object : DialogInterface.OnClickListener {
+                            override fun onClick(dialog: DialogInterface, which: Int) {
+                                dialog.dismiss()
+
+                            }
+                        }).setPositiveButton("确定", object : DialogInterface.OnClickListener {
+                            override fun onClick(dialog: DialogInterface, which: Int) {
+                                viewModel.deleteFund(temp.fundcode)
+                                createAdapter?.remove(temp)
+                            }
+                        })
+                val create = builder.create()
+                create.show()
+                false
+            }
+
+          setOnItemChildClickListener() {
+                adapter, view, position ->
+              val temp = createAdapter!!.data.get(position)
+              when(view.id) {
+                  R.id.tv_name -> {
+                      val view = layoutInflater.inflate(R.layout.fund_add_item,null)
+                      val et_fund_code = view.findViewById<EditText>(R.id.et_fund_code)
+                      et_fund_code.isEnabled = false
+                      et_fund_code.setText(temp.fundcode)
+                      val cb_hold = view.findViewById<CheckBox>(R.id.cb_hold)
+                      val et_fund_money = view.findViewById<EditText>(R.id.et_fund_money)
+                      et_fund_money.setText(MoneyUtils.formatMoney(temp.holdMoney,2))
+                      cb_hold.isChecked = temp.holdFlag == 1
+                      if(cb_hold.isChecked){
+                          et_fund_money.visibility = View.VISIBLE
+                      }else{
+                          et_fund_money.visibility = View.GONE
+                      }
+                      cb_hold.setOnCheckedChangeListener { buttonView, isChecked ->
+                          if (isChecked){
+                              et_fund_money.visibility = View.VISIBLE
+                          }else{
+                              et_fund_money.visibility = View.GONE
+                          }
+                      }
+                      val builder = AlertDialog.Builder(this@FundListActivity)
+                      builder.setTitle("修改").setView(view)
+                              .setNegativeButton("取消", object : DialogInterface.OnClickListener {
+                                  override fun onClick(dialog: DialogInterface, which: Int) {
+                                      dialog.dismiss()
+
+                                  }
+                              }).setPositiveButton("确定", object : DialogInterface.OnClickListener {
+                                  override fun onClick(dialog: DialogInterface, which: Int) {
+                                      val isChecked: Boolean = cb_hold.isChecked
+                                      val fundMoney: String = et_fund_money.text.toString().trim()
+                                      val holdFlag = if (isChecked) 1 else 0
+                                      val  holdMoney = if (isChecked) fundMoney.toDouble() else 0.0
+                                      temp.holdFlag = holdFlag
+                                      temp.holdMoney = holdMoney
+                                      viewModel.update(temp)
+
+                                  }
+                              })
+                      builder.show()
+                  }
+                  else -> {
+
+                  }
+              }
+
+            }
         }
         tv_add.setOnClickListener {
-            val editText = EditText(FundListActivity@ this)
-            editText.filters = arrayOf<InputFilter>(LengthFilter(6)) //最大输入长度
-            editText.inputType = EditorInfo.TYPE_CLASS_NUMBER
-            editText.hint = "请输入基金代码(6位数字)"
+         /*   val et_fund_code = EditText(FundListActivity@ this)
+            et_fund_code.filters = arrayOf<InputFilter>(LengthFilter(6)) //最大输入长度
+            et_fund_code.inputType = EditorInfo.TYPE_CLASS_NUMBER
+            et_fund_code.hint = "请输入基金代码(6位数字)"*/
+            val view = layoutInflater.inflate(R.layout.fund_add_item,null)
+            val et_fund_code = view.findViewById<EditText>(R.id.et_fund_code)
+            val cb_hold = view.findViewById<CheckBox>(R.id.cb_hold)
+            val et_fund_money = view.findViewById<EditText>(R.id.et_fund_money)
+
+            cb_hold.setOnCheckedChangeListener { buttonView, isChecked ->
+                if (isChecked){
+                    et_fund_money.visibility = View.VISIBLE
+                }else{
+                    et_fund_money.visibility = View.GONE
+                }
+            }
+
             val builder = AlertDialog.Builder(FundListActivity@ this)
-            builder.setTitle("添加基金").setView(editText)
+            builder.setTitle("添加基金").setView(view)
                     .setNegativeButton("取消", object : DialogInterface.OnClickListener {
                         override fun onClick(dialog: DialogInterface, which: Int) {
                             dialog.dismiss()
@@ -135,8 +204,12 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
                         }
                     }).setPositiveButton("确定", object : DialogInterface.OnClickListener {
                         override fun onClick(dialog: DialogInterface, which: Int) {
-                            val text: String = editText.text.toString()
-                            viewModel.saveFundCode(text)
+                            val fundCode: String = et_fund_code.text.toString().trim()
+                            val isChecked: Boolean = cb_hold.isChecked
+                            val fundMoney: String = et_fund_money.text.toString().trim()
+                            val holdFlag = if (isChecked) 1 else 0
+                            val  holdMoney = if (fundMoney.isNotEmpty()) fundMoney.toDouble() else 0.0
+                            viewModel.saveFundCode(fundCode,holdFlag,holdMoney)
 
                         }
                     })

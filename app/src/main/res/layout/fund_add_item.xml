@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <EditText
+        android:id="@+id/et_fund_code"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="请输入基金代码(6位数字)"
+        android:inputType="number"
+        android:maxLength="6"
+        android:maxLines="1"
+        android:singleLine="true" />
+
+    <TextView
+        android:id="@+id/tv_hold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="是否持有"
+        app:layout_constraintBaseline_toBaselineOf="@id/cb_hold"
+        app:layout_constraintTop_toBottomOf="@id/et_fund_code" />
+
+    <CheckBox
+        android:id="@+id/cb_hold"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:checked="false"
+        app:layout_constraintLeft_toRightOf="@id/tv_hold"
+        app:layout_constraintTop_toBottomOf="@id/et_fund_code" />
+
+    <EditText
+        android:id="@+id/et_fund_money"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="请输入持仓金额"
+        android:inputType="numberDecimal"
+        android:maxLength="13"
+        android:maxLines="1"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/cb_hold"
+        android:singleLine="true" />
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -16,8 +16,14 @@ interface FundDataSource {
      *
      * @return MutableList<String>?
      */
+    @Deprecated(message = "停用")
     fun listFundCodeList(): MutableList<String>?
 
+    /**
+     *
+     * @return MutableList<FundInfo>?
+     */
+    fun listFundInfos(): MutableList<FundInfo>?
     /**
      *
      * @param fundCode String

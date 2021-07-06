@@ -1,14 +1,14 @@
 package com.sjl.fund.db
 
-import android.provider.ContactsContract
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.sjl.core.kotlin.app.BaseApplication
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.sjl.core.kotlin.util.ViewUtils
-import com.sjl.fund.app.MyApplication
 import com.sjl.fund.db.dao.FundInfoDao
 import com.sjl.fund.entity.FundInfo
+
 
 /**
  * TODO
@@ -21,30 +21,33 @@ import com.sjl.fund.entity.FundInfo
 
 @Database(entities = [
     FundInfo::class
-], version = 1)
+], version = 2)
 abstract class FundDb : RoomDatabase() {
 
-            abstract val userLoginDao: FundInfoDao
+    abstract val userLoginDao: FundInfoDao
 
 
+    companion object {
 
+        @Volatile
+        private var instance: FundDb? = null
 
-            companion object {
-
-            @Volatile
-            private var instance: FundDb? = null
-
-            fun getInstance() = instance ?: synchronized(FundDb::class.java) {
-                instance ?: buildDatabase().also { instance = it }
-            }
+        fun getInstance() = instance ?: synchronized(FundDb::class.java) {
+            instance ?: buildDatabase().also { instance = it }
+        }
 
         private fun buildDatabase(): FundDb = Room.databaseBuilder(ViewUtils.getContext()
                 , FundDb::class.java, "fund.db")
-                .addMigrations()
-                .allowMainThreadQueries()
+                .addMigrations(MIGRATION_1_TO_2)
+                .allowMainThreadQueries() // 允许主线程执行SQL语句
                 .build()
-
+        //https://www.jianshu.com/p/41272f319ae7?utm_campaign=maleskine
+        val MIGRATION_1_TO_2: Migration = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("alter table fund_info add column holdFlag INTEGER NOT NULL DEFAULT 1")
+                database.execSQL("alter table fund_info add column holdMoney real NOT NULL DEFAULT 0")
+            }
+        }
     }
-
 
 }

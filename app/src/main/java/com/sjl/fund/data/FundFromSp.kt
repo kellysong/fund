@@ -23,6 +23,10 @@ class FundFromSp : FundDataSource {
         return oldFundCodeList.splitNotNull(",")
     }
 
+    override fun listFundInfos(): MutableList<FundInfo>? {
+        return null
+    }
+
 
     override fun deleteFund(fundCode: String) {
         val split = listFundCodeList()

@@ -16,6 +16,10 @@ class FundFromDb : FundDataSource {
        return DaoRepository.listFundCode()
     }
 
+    override fun listFundInfos(): MutableList<FundInfo>? {
+        return DaoRepository.listFundInfos()
+    }
+
 
     override fun deleteFund(fundCode: String) {
         DaoRepository.delete(fundCode)
