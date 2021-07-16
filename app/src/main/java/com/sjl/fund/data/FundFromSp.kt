@@ -1,7 +1,7 @@
 package com.sjl.fund.data
 
-import com.sjl.core.kotlin.util.PreferencesHelper
-import com.sjl.core.kotlin.util.ViewUtils
+import com.sjl.core.util.PreferencesHelper
+import com.sjl.core.util.ViewUtils
 import com.sjl.fund.entity.FundInfo
 import com.sjl.fund.util.splitNotNull
 

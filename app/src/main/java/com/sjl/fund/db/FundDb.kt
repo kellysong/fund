@@ -5,7 +5,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.sjl.core.kotlin.util.ViewUtils
+import com.sjl.core.util.ViewUtils
 import com.sjl.fund.db.dao.FundInfoDao
 import com.sjl.fund.entity.FundInfo
 

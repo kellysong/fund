@@ -3,8 +3,8 @@ package com.sjl.fund.mvvm
 import android.text.TextUtils
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import com.sjl.core.kotlin.mvvm.BaseViewModel
-import com.sjl.core.kotlin.util.log.LogUtils
+import com.sjl.core.mvvm.BaseViewModel
+import com.sjl.core.util.log.LogUtils
 import com.sjl.fund.data.FundDataSource
 import com.sjl.fund.data.FundFromDb
 import com.sjl.fund.data.FundFromSp

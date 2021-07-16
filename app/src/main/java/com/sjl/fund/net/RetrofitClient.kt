@@ -1,7 +1,7 @@
 package com.sjl.fund.net
 
 import com.google.gson.Gson
-import com.sjl.core.kotlin.net.RetrofitHelper
+import com.sjl.core.net.RetrofitHelper
 
 /**
  * TODO

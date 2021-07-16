@@ -2,10 +2,10 @@ package com.sjl.fund.app
 
 import android.content.Context
 import androidx.multidex.MultiDex
-import com.sjl.core.kotlin.app.BaseApplication
-import com.sjl.core.kotlin.net.BaseUrlAdapter
-import com.sjl.core.kotlin.net.RetrofitHelper
-import com.sjl.core.kotlin.net.RetrofitParams
+import com.sjl.core.app.BaseApplication
+import com.sjl.core.net.BaseUrlAdapter
+import com.sjl.core.net.RetrofitHelper
+import com.sjl.core.net.RetrofitParams
 import com.sjl.fund.BuildConfig
 import com.sjl.fund.db.FundDb
 

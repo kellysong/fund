@@ -17,8 +17,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.chad.library.adapter.base.listener.OnItemDragListener
 import com.chad.library.adapter.base.viewholder.BaseViewHolder
-import com.sjl.core.kotlin.mvvm.BaseViewModelActivity
-import com.sjl.core.kotlin.util.log.LogUtils
+import com.sjl.core.mvvm.BaseViewModelActivity
+import com.sjl.core.util.log.LogUtils
 import com.sjl.fund.R
 import com.sjl.fund.adapter.FundListAdapter
 import com.sjl.fund.db.DaoRepository

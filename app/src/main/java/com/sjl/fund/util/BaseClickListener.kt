@@ -1,6 +1,7 @@
 package com.sjl.fund.util
 
 import android.os.Handler
+import android.os.Looper
 import android.view.View
 
 
@@ -41,7 +42,7 @@ abstract class BaseClickListener protected constructor() : View.OnClickListener 
     }
 
     init {
-        handler = Handler()
+        handler =  Handler(Looper.getMainLooper())
     }
 }
 
