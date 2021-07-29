@@ -220,6 +220,21 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
 
 
     override fun initData() {
+
+
+    }
+
+
+    override fun onDestroy() {
+        super.onDestroy()
+        timer.cancel()
+    }
+
+    private fun createAdapter(): FundListAdapter {
+        return FundListAdapter(null)
+    }
+
+    override fun startObserve() {
         viewModel.getError().observe(this, Observer<Throwable> { e ->
             LogUtils.e("发生异常", e)
             if (swipeRefreshLayout.isRefreshing) {
@@ -283,24 +298,13 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
         }
         val timerTask = object : TimerTask() {
             override fun run() {
-              runOnUiThread {
-                  viewModel.refreshData()
-              }
+                runOnUiThread {
+                    viewModel.refreshData()
+                }
             }
         }
         if (flag) {
             timer.scheduleAtFixedRate(timerTask, 10 * 1000, 10 * 1000)
         }
-
-    }
-
-
-    override fun onDestroy() {
-        super.onDestroy()
-        timer.cancel()
-    }
-
-    private fun createAdapter(): FundListAdapter {
-        return FundListAdapter(null)
     }
 }
