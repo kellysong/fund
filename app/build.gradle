@@ -16,14 +16,29 @@ android {
         multiDexEnabled true
 
     }
+    signingConfigs {
+        release {
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+            storeFile file('keystore/debug.keystore')
+            storePassword 'android'
+        }
+    }
+
     buildTypes {
         debug {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             buildConfigField("boolean", "enableLog", "true")
-
+            signingConfig signingConfigs.release
         }
         release {
-            minifyEnabled false
+            //暂时不混淆，还没配置好混淆规则
+//            minifyEnabled true
+//            // 移除无用的resource文件
+//            shrinkResources true
+//            //Zipalign优化
+//            zipAlignEnabled true
+            signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             buildConfigField("boolean", "enableLog", "false")
 

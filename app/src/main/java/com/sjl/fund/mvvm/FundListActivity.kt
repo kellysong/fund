@@ -121,7 +121,6 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
                         })
                 val create = builder.create()
                 create.show()
-                false
             }
 
           setOnItemChildClickListener() {
@@ -161,7 +160,7 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
                                       val isChecked: Boolean = cb_hold.isChecked
                                       val fundMoney: String = et_fund_money.text.toString().trim()
                                       val holdFlag = if (isChecked) 1 else 0
-                                      val  holdMoney = if (isChecked) fundMoney.toDouble() else 0.0
+                                      val  holdMoney = if (isChecked && !fundMoney.isBlank()) fundMoney.toDouble() else 0.0
                                       temp.holdFlag = holdFlag
                                       temp.holdMoney = holdMoney
                                       viewModel.update(temp)
