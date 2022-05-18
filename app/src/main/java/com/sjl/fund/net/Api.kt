@@ -26,7 +26,7 @@ interface Api {
      * @param rt Long
      * @return ResponseData<List<ArticleBean>> okhttp3.ResponseBody
      */
-    @GET("http://fundgz.1234567.com.cn/js/{code}.js")
+    @GET("js/{code}.js")
     fun getFundInfo(@Path("code") code: String, @Query("rt") rt: Long): Call<ResponseBody>
 
     /**

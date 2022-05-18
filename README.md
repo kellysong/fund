@@ -1,5 +1,5 @@
 
-# fund
+# fund（实时基金）
 
-一个基于kotlin的MVVM示例（实时基金）
+包含Kotlin MVVM示例和Kotlin MVI示例
 

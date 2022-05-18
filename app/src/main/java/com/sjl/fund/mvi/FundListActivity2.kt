@@ -1,4 +1,4 @@
-package com.sjl.fund.mvvm
+package com.sjl.fund.mvi
 
 
 import android.animation.ValueAnimator
@@ -11,6 +11,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.Observer
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -23,19 +24,27 @@ import com.sjl.fund.R
 import com.sjl.fund.adapter.FundListAdapter
 import com.sjl.fund.db.DaoRepository
 import com.sjl.fund.entity.FundInfo
-import com.sjl.fund.util.BaseClickListener
 import com.sjl.fund.util.DateUtils
 import com.sjl.fund.util.MoneyUtils
 import kotlinx.android.synthetic.main.fund_list_activity.*
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
-
-class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
+/**
+ * TODO
+ * @author Kelly
+ * @version 1.0.0
+ * @filename FundListActivity2
+ * @time 2022/5/18 16:40
+ * @copyright(C) 2021 song
+ */
+class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
 
     override fun getLayoutId(): Int = R.layout.fund_list_activity
 
-    override fun providerVMClass(): Class<FundListViewModel>? = FundListViewModel::class.java
+    override fun providerVMClass(): Class<FundListViewModel2>? = FundListViewModel2::class.java
     private val TAG = this.javaClass.simpleName
     var createAdapter: FundListAdapter? = null
 
@@ -77,7 +86,8 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
                     v.duration = 300
                     v.start()
                 }
-                viewModel.sortData(createAdapter!!.data)
+                viewModel.dispatch(FundListIntent.SortData(createAdapter!!.data))
+
             }
         }
 
@@ -97,14 +107,15 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
     override fun initListener() {
         swipeRefreshLayout.setOnRefreshListener {
             swipeRefreshLayout.isRefreshing = true
-            viewModel.refreshData()
+            viewModel.dispatch(FundListIntent.RefreshData)
+
         }
 
 
         createAdapter?.apply {
             setOnItemClickListener { adapter, view, position ->
 //                val builder = AlertDialog.Builder(FundListActivity@ this)
-                val builder = AlertDialog.Builder(this@FundListActivity)
+                val builder = AlertDialog.Builder(this@FundListActivity2)
                 val temp = createAdapter!!.data.get(position)
                 builder.setTitle("删除").setMessage("确定删除该条目("+temp.fundcode+")?")
                         .setNegativeButton("取消", object : DialogInterface.OnClickListener {
@@ -114,7 +125,7 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
                             }
                         }).setPositiveButton("确定", object : DialogInterface.OnClickListener {
                             override fun onClick(dialog: DialogInterface, which: Int) {
-                                viewModel.deleteFund(temp.fundcode)
+                                viewModel.dispatch(FundListIntent.DeleteFund(temp.fundcode))
                                 createAdapter?.remove(temp)
                             }
                         })
@@ -147,7 +158,7 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
                               et_fund_money.visibility = View.GONE
                           }
                       }
-                      val builder = AlertDialog.Builder(this@FundListActivity)
+                      val builder = AlertDialog.Builder(this@FundListActivity2)
                       builder.setTitle("修改").setView(view)
                               .setNegativeButton("取消", object : DialogInterface.OnClickListener {
                                   override fun onClick(dialog: DialogInterface, which: Int) {
@@ -162,7 +173,7 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
                                       val  holdMoney = if (isChecked && !fundMoney.isBlank()) fundMoney.toDouble() else 0.0
                                       temp.holdFlag = holdFlag
                                       temp.holdMoney = holdMoney
-                                      viewModel.update(temp)
+                                      viewModel.dispatch(FundListIntent.Update(temp))
 
                                   }
                               })
@@ -207,13 +218,14 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
                             val fundMoney: String = et_fund_money.text.toString().trim()
                             val holdFlag = if (isChecked) 1 else 0
                             val  holdMoney = if (fundMoney.isNotEmpty()) fundMoney.toDouble() else 0.0
-                            viewModel.saveFundCode(fundCode,holdFlag,holdMoney)
+                            viewModel.dispatch(FundListIntent.SaveFundCode(fundCode,holdFlag,holdMoney))
 
                         }
                     })
             builder.show()
 
         }
+
     }
 
 
@@ -233,55 +245,62 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
     }
 
     override fun startObserve() {
-        viewModel.getError().observe(this, Observer<Throwable> { e ->
-            LogUtils.e("发生异常", e)
-            if (swipeRefreshLayout.isRefreshing) {
-                swipeRefreshLayout.isRefreshing = false
-            }
-        })
-        viewModel.getFinally().observe(this, Observer<Int> {
-            if (swipeRefreshLayout.isRefreshing) {
-                swipeRefreshLayout.isRefreshing = false
-            }
-        })
 
+        lifecycleScope.launch {
+            viewModel.viewState.collect {
+                when (it) {
+                    is FundListUiState.LoadSuccess -> {
+                        val resData = it.resData
+                        resData?.run {
+                            synchronized(TAG) {
+                                val temp = this
+                                if (createAdapter!!.data.size == 0) {
+                                    createAdapter?.addData(temp)
+                                } else {
+                                    var exist = false
+                                    for ((index, element) in createAdapter!!.data.withIndex()) {
+                                        if (element.fundcode == temp.fundcode) {
+                                            createAdapter?.setData(index, temp)
+                                            exist = true
+                                            break //注意跳出
+                                        } else {
+                                            exist = false
+                                        }
+                                    }
+                                    if (exist) {
+                                       return@run
+                                    }
+                                    createAdapter?.addData(temp)
+                                }
+                            }
+                        }
+
+                    }
+                    is FundListUiState.LoadError -> {
+                        LogUtils.e("发生异常", it.error)
+                        if (swipeRefreshLayout.isRefreshing) {
+                            swipeRefreshLayout.isRefreshing = false
+                        }
+                    }
+                    is FundListUiState.LoadFinish -> {
+                        if (swipeRefreshLayout.isRefreshing) {
+                            swipeRefreshLayout.isRefreshing = false
+                        }
+                    }
+                }
+            }
+        }
         if (viewModel.dataSourceType == 0){
             val listFundInfos = DaoRepository.listFundInfos()
             createAdapter?.setNewInstance(listFundInfos)
         }
 
         //获取最新数据
-        viewModel.getArticle().observe(this, Observer<FundInfo> {
-            it?.run {
-                /* if (swipeRefreshLayout.isRefreshing){
-                     swipeRefreshLayout.isRefreshing = false
-                 }*/
-                synchronized(TAG) {
-                    val temp = it
-                    if (createAdapter!!.data.size == 0) {
-                        createAdapter?.addData(temp)
-                    } else {
-                        var exist = false
-                        for ((index, element) in createAdapter!!.data.withIndex()) {
-                            if (element.fundcode == temp.fundcode) {
-                                createAdapter?.setData(index, temp)
-                                exist = true
-                                break //注意跳出
-                            } else {
-                                exist = false
-                            }
-                        }
-                        if (exist) {
-                            return@Observer
-                        }
-                        createAdapter?.addData(temp)
-                    }
-                }
-            }
-        })
+        viewModel.dispatch(FundListIntent.RefreshData)
+
+
+
         val df = SimpleDateFormat("HH:mm:ss") //设置日期格式
-
-
         var nowTime: Date?
         var beginTime: Date?
         var endTime: Date?
@@ -297,7 +316,7 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
         val timerTask = object : TimerTask() {
             override fun run() {
                 runOnUiThread {
-                    viewModel.refreshData()
+                    viewModel.dispatch(FundListIntent.RefreshData)
                 }
             }
         }
