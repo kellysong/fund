@@ -93,10 +93,10 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
                 }
             }
 
-        }, { e ->
-            _viewState.emit(FundListUiState.LoadError(e))
         }, {
             _viewState.emit(FundListUiState.LoadFinish(200))
+        }, { e ->
+            _viewState.emit(FundListUiState.LoadError(e))
         })
     }
 

@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.map
 import retrofit2.HttpException
+import retrofit2.await
 import java.lang.IllegalArgumentException
 
 
@@ -77,28 +78,28 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
             for ((index, value) in listFundCodeList.withIndex()) {
 
                 //方法一
-                /*  catchException({
-                      val data = RetrofitClient.api.getFundInfo(s, System.currentTimeMillis())
+                  catchException({
+                      val data = RetrofitClient.api.getFundInfo(value.fundcode, System.currentTimeMillis())
                       val string = data.await().string()
                       val fundInfo =  RetrofitClient.gson.fromJson(string.substring(8, string.length - 2), FundInfo::class.java)
                       datas.value = fundInfo
-  //                    LogUtils.i("s:${s},string:${string}")
+                      LogUtils.i("s:${value.fundcode},string:${string}")
                   }, { e ->
-                      LogUtils.e("s:${s},请求异常", e)
-                      deleteFund(s)
+                      LogUtils.e("s:${value.fundcode},请求异常", e)
+                      deleteFund(value.fundcode)
                   })
-  */
                 //方法二：转为Flow
 
-                requestServer(value.fundcode, value.sortId, value.holdFlag, value.holdMoney)
+//                requestServer(value.fundcode, value.sortId, value.holdFlag, value.holdMoney)
 
             }
-        }, { e ->
-            errorGlobal.value = e
         }, {
             finallyGlobal.value = 200
+        }, { e ->
+            errorGlobal.value = e
         })
     }
+
 
     private suspend fun requestServer(fundCode: String, sortId: Int, holdFlag: Int, fundMoney: Double) {
         ApiRepository.getFundInfo(fundCode, System.currentTimeMillis())
