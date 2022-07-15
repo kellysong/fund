@@ -20,33 +20,21 @@ import java.lang.IllegalArgumentException
 
 
 class FundListViewModel : BaseViewModel(), FundDataSource {
+    val dataSourceType = 0
+    val errorGlobal by lazy { MutableLiveData<Throwable>() }
 
-    protected val errorGlobal by lazy { MutableLiveData<Throwable>() }
+   val finallyGlobal by lazy { MutableLiveData<Int>() }
 
-    protected val finallyGlobal by lazy { MutableLiveData<Int>() }
-
-    /**
-     * 请求失败，出现异常
-     */
-    fun getError(): LiveData<Throwable> {
-        return errorGlobal
-    }
-
-    /**
-     * 请求完成，在此处做一些关闭操作
-     */
-    fun getFinally(): LiveData<Int> {
-        return finallyGlobal
-    }
-
-    private val datas: MutableLiveData<FundInfo> by lazy {
+    val updateFundInfo: MutableLiveData<FundInfo> by lazy {
         MutableLiveData<FundInfo>().also {
             loadDatas()
         }
     }
+    val listFundInfos: MutableLiveData<List<FundInfo>> by lazy {
+        MutableLiveData<List<FundInfo>>()
+    }
 
 
-    val dataSourceType = 0
     val fundDataSource: FundDataSource by lazy {
 
         when (dataSourceType) {
@@ -58,12 +46,8 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
         }
     }
 
-    /**
-     * @return LiveData<List<ArticleBean>>
-     */
-    fun getArticle(): LiveData<FundInfo> {
-        return datas
-    }
+
+
 
     private fun loadDatas() {
         LogUtils.i("开始加载数据")
@@ -72,6 +56,8 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
             finallyGlobal.value = 200
             return
         }
+        listFundInfos.value  = listFundCodeList
+
         launchUI({
             LogUtils.i("基金数量：${listFundCodeList.size},\t$listFundCodeList")
 
@@ -82,7 +68,7 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
                       val data = RetrofitClient.api.getFundInfo(value.fundcode, System.currentTimeMillis())
                       val string = data.await().string()
                       val fundInfo =  RetrofitClient.gson.fromJson(string.substring(8, string.length - 2), FundInfo::class.java)
-                      datas.value = fundInfo
+                      updateFundInfo.value = fundInfo
                       LogUtils.i("s:${value.fundcode},string:${string}")
                   }, { e ->
                       LogUtils.e("s:${value.fundcode},请求异常", e)
@@ -120,7 +106,7 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
                     it.sortId = sortId
                     it.holdFlag = holdFlag
                     it.holdMoney = fundMoney
-                    datas.value = it
+                    updateFundInfo.value = it
                     insertFund(it)
                 }
 
@@ -181,7 +167,7 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
 
     fun update(fundInfo: FundInfo) {
         insertFund(fundInfo)
-        datas.value = fundInfo
+        updateFundInfo.value = fundInfo
     }
 
 

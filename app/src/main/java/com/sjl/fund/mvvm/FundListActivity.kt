@@ -233,25 +233,28 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
     }
 
     override fun startObserve() {
-        viewModel.getError().observe(this, Observer<Throwable> { e ->
+        viewModel.errorGlobal.observe(this, Observer<Throwable> { e ->
             LogUtils.e("发生异常", e)
             if (swipeRefreshLayout.isRefreshing) {
                 swipeRefreshLayout.isRefreshing = false
             }
         })
-        viewModel.getFinally().observe(this, Observer<Int> {
+        viewModel.finallyGlobal.observe(this, Observer<Int> {
             if (swipeRefreshLayout.isRefreshing) {
                 swipeRefreshLayout.isRefreshing = false
             }
         })
 
-        if (viewModel.dataSourceType == 0){
-            val listFundInfos = DaoRepository.listFundInfos()
-            createAdapter?.setNewInstance(listFundInfos)
-        }
-
-        //获取最新数据
-        viewModel.getArticle().observe(this, Observer<FundInfo> {
+        //初始化
+        viewModel.listFundInfos.observe(this, Observer<List<FundInfo>> {
+            it?.run {
+                synchronized(TAG) {
+                    createAdapter?.addData(it)
+                }
+            }
+        })
+        //更新
+        viewModel.updateFundInfo.observe(this, Observer<FundInfo> {
             it?.run {
                 /* if (swipeRefreshLayout.isRefreshing){
                      swipeRefreshLayout.isRefreshing = false
@@ -279,6 +282,7 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
                 }
             }
         })
+
         val df = SimpleDateFormat("HH:mm:ss") //设置日期格式
 
 

@@ -249,8 +249,13 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         lifecycleScope.launch {
             viewModel.viewState.collect {
                 when (it) {
+                    is FundListUiState.InitSuccess -> {
+                        LogUtils.i("InitSuccess")
+                        createAdapter?.setNewInstance(it.resData)
+                    }
                     is FundListUiState.LoadSuccess -> {
                         val resData = it.resData
+                        LogUtils.i("LoadSuccess")
                         resData?.run {
                             synchronized(TAG) {
                                 val temp = this
@@ -289,10 +294,6 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
                     }
                 }
             }
-        }
-        if (viewModel.dataSourceType == 0){
-            val listFundInfos = DaoRepository.listFundInfos()
-            createAdapter?.setNewInstance(listFundInfos)
         }
 
         //获取最新数据

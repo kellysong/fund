@@ -10,8 +10,11 @@ import com.sjl.fund.data.FundFromSp
 import com.sjl.fund.entity.FundInfo
 import com.sjl.fund.net.ApiRepository
 import com.sjl.fund.net.RetrofitClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 
 /**
@@ -37,7 +40,7 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
         viewModelScope.launch {
             userIntent.collect {
                 when (it) {
-
+//                    is FundListIntent.InitData -> listFundInfos()
                     is FundListIntent.RefreshData -> refreshData()
                     is FundListIntent.SortData -> sortData(it.data)
                     is FundListIntent.DeleteFund -> deleteFund(it.fundCode)
@@ -86,6 +89,10 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
 
         launchUI({
             val listFundCodeList = listFundInfos()
+            val name = Thread.currentThread().name
+            LogUtils.i(name)
+            _viewState.emit(FundListUiState.InitSuccess(listFundCodeList))
+
             listFundCodeList?.let {
                 LogUtils.i("基金数量：${it.size},\t$it")
                 for ((index, value) in it.withIndex()) {
@@ -197,6 +204,7 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
 }
 
 sealed class FundListIntent {
+//    object InitData : FundListIntent()
     object RefreshData : FundListIntent()
     data class SortData(val data: MutableList<FundInfo>) : FundListIntent()
     data class DeleteFund(val fundCode: String) : FundListIntent()
@@ -208,7 +216,7 @@ sealed class FundListIntent {
 
 sealed class FundListUiState {
 
-
+    data class InitSuccess(val resData: MutableList<FundInfo>?) : FundListUiState()
     data class LoadError(val error: Throwable) : FundListUiState()
     data class LoadFinish(val code: Int) : FundListUiState()
     data class LoadSuccess(val resData: FundInfo) : FundListUiState()

@@ -95,5 +95,7 @@ dependencies {
 
     rootProject.ext.dependencies.each { k, v -> implementation v }
     rootProject.ext.debugDependencies.each { k, v -> debugImplementation v }
+    rootProject.ext.debugDependencies.each { k, v -> releaseImplementation v }
+
     rootProject.ext.annotationProcessor.each { k, v -> kapt v }
 }

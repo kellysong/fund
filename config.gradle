@@ -27,8 +27,8 @@ ext {
             "kotlin"          : "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${version["kotlinVersion"]}",
             "kotlinCoroutines": "org.jetbrains.kotlinx:kotlinx-coroutines-android:${version["kotlinVersion"]}",*/
 
-            room              : "androidx.room:room-runtime:${version.roomVersion}",
-            multidex          : "androidx.multidex:multidex:${version.multidex}"
+            "room"              : "androidx.room:room-runtime:${version.roomVersion}",
+            "multidex"          : "androidx.multidex:multidex:${version.multidex}"
 
     ]
     annotationProcessor = [
@@ -38,5 +38,7 @@ ext {
     debugDependencies = [
             "leakcanary": "com.squareup.leakcanary:leakcanary-android:${version.leakcanaryVersion}"
     ]
-
+    releaseDependencies = [
+            "leakcanary": "com.squareup.leakcanary:leakcanary-android-no-op:${version.leakcanaryVersion}"
+    ]
 }
