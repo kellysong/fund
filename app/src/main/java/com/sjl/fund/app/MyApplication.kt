@@ -8,7 +8,6 @@ import com.sjl.core.net.RetrofitHelper
 import com.sjl.core.net.RetrofitLogAdapter
 import com.sjl.core.net.RetrofitParams
 import com.sjl.fund.BuildConfig
-import com.sjl.fund.db.FundDb
 
 class MyApplication : BaseApplication() {
     override fun onCreate() {

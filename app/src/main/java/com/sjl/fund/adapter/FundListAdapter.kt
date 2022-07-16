@@ -1,6 +1,7 @@
 package com.sjl.fund.adapter
 
 import android.graphics.Color
+import android.text.TextUtils
 import android.view.ViewGroup
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.module.DraggableModule
@@ -50,7 +51,7 @@ class FundListAdapter(data: List<FundInfo>?) : BaseQuickAdapter<FundInfo, BaseVi
         //https://github.com/CymChad/BaseRecyclerViewAdapterHelper/issues/3305#issuecomment-712553987,下面会导致列表第一项不会在onitemchildclick里面响应，
         // 需要在activity里 adapter.addChildClickViewIds或在adapter的构造addChildClickViewIds()添加点击事件
 //        addChildClickViewIds(R.id.tv_name)
-        if (fundInfo.gszzl.toDouble() > 0) {
+        if (!TextUtils.isEmpty(fundInfo.gszzl)&&fundInfo.gszzl.toDouble() > 0) {
             baseViewHolder.setTextColor(R.id.tv_gz_v2, Color.RED)
         } else {
             baseViewHolder.setTextColor(R.id.tv_gz_v2, Color.GREEN)

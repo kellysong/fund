@@ -4,8 +4,8 @@ ext {
             buildToolsVersion: "30.0.2",
             minSdkVersion    : 14,
             targetSdkVersion : 30,
-            versionCode      : 3,
-            versionName      : "1.0.2",
+            versionCode      : 4,
+            versionName      : "1.0.3",
             applicationId    : "com.sjl.fund"
     ]
 
@@ -39,6 +39,5 @@ ext {
             "leakcanary": "com.squareup.leakcanary:leakcanary-android:${version.leakcanaryVersion}"
     ]
     releaseDependencies = [
-            "leakcanary": "com.squareup.leakcanary:leakcanary-android-no-op:${version.leakcanaryVersion}"
     ]
 }

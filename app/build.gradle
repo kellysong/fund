@@ -34,11 +34,11 @@ android {
         }
         release {
             //暂时不混淆，还没配置好混淆规则
-//            minifyEnabled true
-//            // 移除无用的resource文件
-//            shrinkResources true
-//            //Zipalign优化
-//            zipAlignEnabled true
+            minifyEnabled true
+            // 移除无用的resource文件
+            shrinkResources true
+            //Zipalign优化
+            zipAlignEnabled true
             signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             buildConfigField("boolean", "enableLog", "false")
@@ -59,17 +59,47 @@ android {
         def channel = "fund"
         def fileName//获取当前时间的"YYYY-MM-dd"格式。
         def createTime = new Date().format("YYYY-MM-dd", TimeZone.getTimeZone("GMT+08:00"))
-        //println variant.getPackageApplicationProvider().outputFile
-        variant.outputs.each {
-            if (buildType == "release") {
+
+        variant.outputs.all { output ->
+            def outputFile = output.outputFile
+            if (outputFile != null && outputFile.name.endsWith('.apk')) {
+                if (buildType == 'release') {//如果是release包
+                    fileName = "${channel}_v${defaultConfig.versionName}_${createTime}_${buildType}.apk"
+                } else if (buildType == 'debug') {//如果是debug包
+                    fileName = "${channel}_v${defaultConfig.versionName}_${createTime}_${buildType}.apk"
+                }
                 //旧版
 //                it.getPackageApplication().outputDirectory = new File(project.rootDir.absolutePath + "/apks/${buildType}/${createTime}")
-                variant.getPackageApplicationProvider().get().outputDirectory = new File(project.rootDir.parentFile.getAbsolutePath() + "/apk/fund/${buildType}/${createTime}")
-                fileName = "${channel}_v${defaultConfig.versionName}_${createTime}_${buildType}.apk"
                 //it.outputFile = new File(it.outputFile.parent, fileName)
-                it.outputFileName = fileName
+                outputFileName = fileName
+
+                if (buildType == "release") {
+                    def tarFile = new File(outputFile.parent, fileName)
+                    println("tarFile:"+tarFile.getAbsolutePath())
+
+                    def desFile= new File(project.rootDir.parentFile.getAbsolutePath() + "/apk/fund/${buildType}/${createTime}")
+                    if (!desFile.exists()){
+                        desFile.mkdirs()
+                    }
+
+                    println("desFile:"+desFile.getAbsolutePath())
+                    // 打包完成后做的一些事,复制apk到指定文件夹
+                   variant.assemble.doLast {
+
+                        println("====doLast: copy apk,tarFile:"+tarFile.exists()+",desFile:"+desFile.exists())
+                        copy {
+                            from tarFile
+                            into desFile
+                        }
+                    }
+
+                }
             }
         }
+
+
+
+
     }
 
 }
@@ -95,7 +125,7 @@ dependencies {
 
     rootProject.ext.dependencies.each { k, v -> implementation v }
     rootProject.ext.debugDependencies.each { k, v -> debugImplementation v }
-    rootProject.ext.debugDependencies.each { k, v -> releaseImplementation v }
+//    rootProject.ext.releaseDependencies.each { k, v -> releaseImplementation v }
 
     rootProject.ext.annotationProcessor.each { k, v -> kapt v }
 }
