@@ -268,6 +268,29 @@ public static java.lang.String TABLENAME;
 -dontwarn com.tencent.bugly.**
 -keep public class com.tencent.bugly.**{*;}
 
+# POI 混淆
+# 保留 POI 核心类及其内部类
+-keep class org.apache.poi.** { *; }
+-keep interface org.apache.poi.** { *; }
+
+# 保留 XML 处理相关（针对 poi-ooxml）
+-keep class org.apache.xmlbeans.** { *; }
+-keep class org.openxmlformats.** { *; }
+-keep class schemasMicrosoftCom.** { *; }
+
+# 保留反射需要的构造器和方法
+-keepclassmembers class org.apache.poi.** {
+    public <init>(...);
+    public void set*(...);
+    public * get*(...);
+}
+
+# 保留 Spreadsheet 相关（如果使用 Excel）
+-keep class org.apache.poi.xssf.** { *; }
+-keep class org.apache.poi.hssf.** { *; }
+-keep class org.apache.poi.ss.** { *; }
+
+
 # base-core
 #修复com.sjl.core.entity.dto.UpdateInfoDto混淆后序列化话问题
 -keep class com.sjl.core.entity.**{*;}

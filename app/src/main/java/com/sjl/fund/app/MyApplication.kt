@@ -27,11 +27,11 @@ class MyApplication : BaseApplication() {
             }
         }).setRetrofitLogAdapter(object : RetrofitLogAdapter{
             override fun printRequestUrl(): Boolean {
-                return true
+                return false
             }
 
             override fun printHttpLog(): Boolean {
-                return false
+                return BuildConfig.enableLog
             }
 
         }).setUseCoroutines(true).build())

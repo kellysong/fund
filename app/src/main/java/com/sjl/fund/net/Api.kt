@@ -35,4 +35,50 @@ interface Api {
      */
     @GET("http://fund.eastmoney.com/js/fundcode_search.js")
     fun searchFundList(): Call<ResponseBody>
+
+    /**
+     * 获取基金历史净值
+     * http://fund.eastmoney.com/f10/F10DataApi.aspx?type=lsjz&code=001970&page=1&per=20
+     * @param code 基金代码
+     * @param page 页码
+     * @param per 每页条数
+     */
+    @GET("http://fund.eastmoney.com/f10/F10DataApi.aspx")
+    fun getFundHistoryNetValue(
+        @Query("type") type: String = "lsjz",
+        @Query("code") code: String,
+        @Query("page") page: Int = 1,
+        @Query("per") per: Int = 20
+    ): Call<ResponseBody>
+
+    /**
+     * 获取基金业绩走势（单位净值走势）
+     * http://fund.eastmoney.com/pingzhongdata/001970.js
+     * @param code 基金代码
+     */
+    @GET("http://fund.eastmoney.com/pingzhongdata/{code}.js")
+    fun getFundPerformanceTrend(@Path("code") code: String): Call<ResponseBody>
+
+    /**
+     * 获取基金持仓信息
+     * http://fund.eastmoney.com/f10/FundArchivesDatas.aspx?type=jjcc&code=001970&topline=10
+     * @param code 基金代码
+     * @param topline 返回条数
+     */
+    @GET("http://fund.eastmoney.com/f10/FundArchivesDatas.aspx")
+    fun getFundHoldings(
+        @Query("type") type: String = "jjcc",
+        @Query("code") code: String,
+        @Query("topline") topline: Int = 10
+    ): Call<ResponseBody>
+
+    /**
+     * 获取基金实时估值
+     * http://fundgz.1234567.com.cn/js/001970.js?rt=1463558676006
+     * 与getFundInfo相同，但用于明确获取实时估值场景
+     * @param code 基金代码
+     * @param rt 时间戳
+     */
+    @GET("http://fundgz.1234567.com.cn/js/{code}.js")
+    fun getFundRealTimeValue(@Path("code") code: String, @Query("rt") rt: Long): Call<ResponseBody>
 }

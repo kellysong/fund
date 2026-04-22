@@ -3,6 +3,7 @@ package com.sjl.fund.mvvm
 
 import android.animation.ValueAnimator
 import android.content.DialogInterface
+import android.content.Intent
 import android.graphics.Color
 import android.os.Build
 import android.view.View
@@ -102,15 +103,23 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
 
 
         createAdapter?.apply {
+            // 点击跳转详情
             setOnItemClickListener { adapter, view, position ->
-//                val builder = AlertDialog.Builder(FundListActivity@ this)
+                val temp = createAdapter!!.data.get(position)
+                val intent = Intent(this@FundListActivity, FundDetailActivity::class.java)
+                intent.putExtra(FundDetailActivity.EXTRA_FUND_CODE, temp.fundcode)
+                intent.putExtra(FundDetailActivity.EXTRA_FUND_NAME, temp.name)
+                startActivity(intent)
+            }
+            
+            // 长按删除
+            setOnItemLongClickListener { adapter, view, position ->
                 val builder = AlertDialog.Builder(this@FundListActivity)
                 val temp = createAdapter!!.data.get(position)
                 builder.setTitle("删除").setMessage("确定删除该条目("+temp.fundcode+")?")
                         .setNegativeButton("取消", object : DialogInterface.OnClickListener {
                             override fun onClick(dialog: DialogInterface, which: Int) {
                                 dialog.dismiss()
-
                             }
                         }).setPositiveButton("确定", object : DialogInterface.OnClickListener {
                             override fun onClick(dialog: DialogInterface, which: Int) {
@@ -120,6 +129,7 @@ class FundListActivity : BaseViewModelActivity<FundListViewModel>() {
                         })
                 val create = builder.create()
                 create.show()
+                true
             }
 
           setOnItemChildClickListener() {

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_popup_menu">
+
+    <TextView
+        android:id="@+id/tv_single_add"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="24dp"
+        android:text="单个添加"
+        android:textColor="#333333"
+        android:textSize="14sp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:layout_marginStart="16dp"
+        android:background="#EEEEEE" />
+
+    <TextView
+        android:id="@+id/tv_batch_import"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="24dp"
+        android:text="批量导入"
+        android:textColor="#333333"
+        android:textSize="14sp"
+        android:background="?android:attr/selectableItemBackground" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:layout_marginStart="16dp"
+        android:background="#EEEEEE" />
+
+    <TextView
+        android:id="@+id/tv_export_template"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="24dp"
+        android:text="导出模板"
+        android:textColor="#333333"
+        android:textSize="14sp"
+        android:background="?android:attr/selectableItemBackground" />
+
+</LinearLayout>

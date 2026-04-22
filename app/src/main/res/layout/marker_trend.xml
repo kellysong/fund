@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_marker"
+    android:paddingLeft="8dp"
+    android:paddingRight="8dp"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp"
+    android:gravity="center_horizontal">
+
+    <TextView
+        android:id="@+id/tv_marker_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="+0.00%"
+        android:textColor="#E54545"
+        android:textSize="13sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tv_marker_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:text="2024-01-01"
+        android:textColor="#666666"
+        android:textSize="11sp" />
+
+</LinearLayout>

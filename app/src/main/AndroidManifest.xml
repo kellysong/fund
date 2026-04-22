@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.sjl.fund">
 
+    <!-- 存储权限 -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
     <application
         android:name="com.sjl.fund.app.MyApplication"
         android:allowBackup="true"
@@ -20,6 +24,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <!-- 基金详情页面 -->
+        <activity 
+            android:name="com.sjl.fund.mvvm.FundDetailActivity"
+            android:parentActivityName="com.sjl.fund.mvi.FundListActivity2"
+            android:screenOrientation="portrait"
+            android:label="基金详情" />
 
 
         <!--Android 7.0需要使用FileProvider生成content:// Uri来替代file:// Uri-->

@@ -5,6 +5,7 @@ import android.text.TextUtils
 import android.view.ViewGroup
 import com.chad.library.adapter.base.BaseQuickAdapter
 import com.chad.library.adapter.base.module.DraggableModule
+import com.chad.library.adapter.base.module.LoadMoreModule
 import com.chad.library.adapter.base.viewholder.BaseViewHolder
 import com.sjl.fund.R
 import com.sjl.fund.entity.FundInfo
@@ -20,7 +21,7 @@ import java.math.BigDecimal
  * @time 2021/1/7 12:02
  * @copyright(C) 2021 song
  */
-class FundListAdapter(data: List<FundInfo>?) : BaseQuickAdapter<FundInfo, BaseViewHolder>(R.layout.fund_list_recycle_item, data as MutableList<FundInfo>?), DraggableModule {
+class FundListAdapter(data: List<FundInfo>?) : BaseQuickAdapter<FundInfo, BaseViewHolder>(R.layout.fund_list_recycle_item, data as MutableList<FundInfo>?), DraggableModule, LoadMoreModule {
 
     init {
         //首先会按顺序执行类中init代码块，然后再执行构造方法里代码，并且我可以在init代码块中使用类声明的属
