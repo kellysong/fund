@@ -30,7 +30,7 @@
                 android:textColor="#CCFFFFFF"
                 android:textSize="13sp" />
 
-            <!-- 基金代码 + 当日涨幅标签 -->
+            <!-- 基金代码 -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -44,20 +44,6 @@
                     android:layout_height="wrap_content"
                     android:textColor="#99FFFFFF"
                     android:textSize="12sp" />
-
-                <TextView
-                    android:id="@+id/tv_daily_change"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:background="@drawable/bg_daily_change"
-                    android:paddingStart="4dp"
-                    android:paddingEnd="4dp"
-                    android:paddingTop="1dp"
-                    android:paddingBottom="1dp"
-                    android:textColor="#FFFFFF"
-                    android:textSize="10sp"
-                    android:visibility="gone" />
             </LinearLayout>
 
             <!-- 日收益和涨跌同行显示，节省空间 -->
@@ -471,8 +457,8 @@
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
-                    <com.github.mikephil.charting.charts.PieChart
-                        android:id="@+id/pie_chart"
+                    <com.github.mikephil.charting.charts.HorizontalBarChart
+                        android:id="@+id/bar_chart"
                         android:layout_width="match_parent"
                         android:layout_height="200dp"
                         android:layout_marginTop="12dp" />

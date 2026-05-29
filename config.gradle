@@ -4,8 +4,8 @@ ext {
             buildToolsVersion: "30.0.2",
             minSdkVersion    : 26,
             targetSdkVersion : 30,
-            versionCode      : 5,
-            versionName      : "1.1.0",
+            versionCode      : 6,
+            versionName      : "1.2.0",
             applicationId    : "com.sjl.fund"
     ]
 
@@ -17,7 +17,9 @@ ext {
             constraintlayoutVersion: "2.0.4",
             multidex               : "2.0.1",
             roomVersion            : "2.2.5",
-            leakcanaryVersion      : "2.3"
+            leakcanaryVersion      : "2.3",
+            autosize               : "v1.2.1"
+
     ]
 
     dependencies = [
@@ -28,7 +30,8 @@ ext {
             "kotlinCoroutines": "org.jetbrains.kotlinx:kotlinx-coroutines-android:${version["kotlinVersion"]}",*/
 
             "room"              : "androidx.room:room-runtime:${version.roomVersion}",
-            "multidex"          : "androidx.multidex:multidex:${version.multidex}"
+            "multidex"          : "androidx.multidex:multidex:${version.multidex}",
+            "autosize"          : "com.github.JessYanCoding:AndroidAutoSize:${version.autosize}"
 
     ]
     annotationProcessor = [

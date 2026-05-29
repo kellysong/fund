@@ -25,6 +25,11 @@ interface FundDataSource {
      */
     fun listFundInfos(): MutableList<FundInfo>?
     /**
+     * 按分类查询基金列表
+     * @param fundType Int 0=自选，1=其他基金
+     */
+    fun listFundInfosByType(fundType: Int): MutableList<FundInfo>?
+    /**
      *
      * @param fundCode String
      */

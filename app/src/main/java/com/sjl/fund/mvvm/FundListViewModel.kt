@@ -123,6 +123,10 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
         return fundDataSource.listFundInfos()
     }
 
+    override fun listFundInfosByType(fundType: Int): MutableList<FundInfo>? {
+        return fundDataSource.listFundInfosByType(fundType)
+    }
+
 
     @Synchronized
     override fun deleteFund(fundCode: String) {

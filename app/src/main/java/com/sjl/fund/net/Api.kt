@@ -81,4 +81,24 @@ interface Api {
      */
     @GET("http://fundgz.1234567.com.cn/js/{code}.js")
     fun getFundRealTimeValue(@Path("code") code: String, @Query("rt") rt: Long): Call<ResponseBody>
+
+    /**
+     * 获取实时行情（新浪财经通用接口 - 支持指数和股票）
+     * 指数: http://hq.sinajs.cn/list=sh000001,sz399001
+     * 股票: http://hq.sinajs.cn/list=sh601398,sz000001
+     * @param codes 代码列表，逗号分隔
+     */
+    /**
+     * 获取指数实时行情（天天基金/东方财富）
+     * http://push2.eastmoney.com/api/qt/ulist.np/get?fields=f2,f3,f4,f12,f14&secids=1.000001,0.399001,0.399006,1.000688
+     * f2:最新价, f3:涨跌幅, f4:涨跌额, f12:代码, f14:名称
+     */
+    @GET("http://push2.eastmoney.com/api/qt/ulist.np/get")
+    fun getIndexQuotes(
+        @Query("fields") fields: String = "f2,f3,f4,f12,f14",
+        @Query("secids") secids: String
+    ): Call<ResponseBody>
+
+    @GET
+    fun getSinaQuotes(@retrofit2.http.Url url: String): Call<ResponseBody>
 }

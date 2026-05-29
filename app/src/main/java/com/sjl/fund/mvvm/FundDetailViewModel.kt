@@ -13,6 +13,8 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import retrofit2.await
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -270,10 +272,64 @@ class FundDetailViewModel : BaseViewModel() {
                 val jsonObject = JSONObject(matcher.group(1))
                 val content = jsonObject.optString("content", "")
                 val list = parseHoldingsFromHtml(content)
+                // 获取持仓股票的当日涨跌
+                fetchStockDailyChanges(list)
                 holdings.postValue(list)
             }
         } catch (e: Exception) {
             LogUtils.e("获取基金持仓失败", e)
+        }
+    }
+
+    /**
+     * 为持仓股票获取当日涨跌数据
+     */
+    private suspend fun fetchStockDailyChanges(holdings: List<FundHolding>) {
+        if (holdings.isEmpty()) return
+        try {
+            val stockCodes = holdings.mapNotNull { holding ->
+                val code = holding.GPDM
+                when {
+                    code.startsWith("6") -> "sh$code"  // 上海
+                    code.startsWith("0") || code.startsWith("3") -> "sz$code"  // 深圳
+                    else -> null
+                }
+            }
+            if (stockCodes.isEmpty()) return
+
+            val url = "http://hq.sinajs.cn/list=${stockCodes.joinToString(",")}"
+            val response = RetrofitClient.api.getSinaQuotes(url).await()
+            val reader = BufferedReader(InputStreamReader(response.byteStream(), "GBK"))
+            val rawData = reader.readText()
+            reader.close()
+
+            // 解析股票数据：var hq_str_sh601398="名称,开盘,昨收,当前价,...涨跌额,涨跌幅,..."
+            val pattern = Regex("""var hq_str_(\w+)="([^"]+)"""")
+            val changeMap = mutableMapOf<String, String>()
+            for (match in pattern.findAll(rawData)) {
+                val prefixCode = match.groupValues[1]  // sh601398
+                val fields = match.groupValues[2].split(",")
+                if (fields.size >= 34) {
+                    // 涨跌幅在索引32位置
+                    val changePercent = fields[32].trim()
+                    if (changePercent.isNotEmpty()) {
+                        changeMap[prefixCode] = "$changePercent%"
+                    }
+                }
+            }
+
+            // 更新持仓数据
+            for (holding in holdings) {
+                val prefix = when {
+                    holding.GPDM.startsWith("6") -> "sh"
+                    holding.GPDM.startsWith("0") || holding.GPDM.startsWith("3") -> "sz"
+                    else -> null
+                }
+                val key = "$prefix${holding.GPDM}"
+                changeMap[key]?.let { holding.dailyChange = it }
+            }
+        } catch (e: Exception) {
+            LogUtils.e("获取股票行情失败", e)
         }
     }
 

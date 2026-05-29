@@ -1,29 +1,30 @@
 package com.sjl.fund.mvi
 
 import android.animation.ValueAnimator
+import android.app.Dialog
 import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.View
+import android.view.*
 import android.widget.*
-import androidx.appcompat.app.AlertDialog
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.ItemTouchHelper
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.*
 import com.chad.library.adapter.base.listener.OnItemDragListener
 import com.chad.library.adapter.base.listener.OnLoadMoreListener
 import com.chad.library.adapter.base.viewholder.BaseViewHolder
+import com.google.android.material.tabs.TabLayout
 import com.sjl.core.mvvm.BaseViewModelActivity
 import com.sjl.core.util.log.LogUtils
 import com.sjl.fund.R
 import com.sjl.fund.adapter.FundListAdapter
+import com.sjl.fund.adapter.IndexListAdapter
 import com.sjl.fund.db.DaoRepository
 import com.sjl.fund.entity.FundInfo
 import com.sjl.fund.mvvm.FundDetailActivity
@@ -37,9 +38,9 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 /**
- * 主页 - 基金列表
+ * 主页 - 基金列表（双Tab + 指数行情）
  * @author Kelly
- * @version 2.0.0
+ * @version 3.0.0
  */
 class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
 
@@ -50,15 +51,19 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
     private val TAG = this.javaClass.simpleName
     private var createAdapter: FundListAdapter? = null
     private val timer = Timer()
-    private var searchDialog: AlertDialog? = null
+    private var searchDialog: Dialog? = null
     private var searchAdapter: FundListAdapter? = null
-    
+    private var indexAdapter: IndexListAdapter? = null
+
     // 分页相关
     private var currentPage = 0
     private val pageSize = 20
     private var allFundList: List<FundInfo> = emptyList()
 
     private val REQUEST_CODE_IMPORT = 1001
+
+    // 当前Tab: 0=自选, 1=其他基金
+    private var currentTabIndex = 0
 
     override fun initView() {
         recycleView.layoutManager = LinearLayoutManager(this)
@@ -97,10 +102,9 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         createAdapter?.apply {
             draggableModule.isDragEnabled = true
             draggableModule.setOnItemDragListener(listener)
-            
+
             // 启用加载更多
             loadMoreModule.isEnableLoadMore = true
-
             loadMoreModule.setOnLoadMoreListener {
                 loadMoreData()
             }
@@ -110,6 +114,37 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
 
         // 设置侧滑删除
         setupSwipeToDelete()
+
+        // 初始化指数水平滚动列表
+        initIndexRecyclerView()
+
+        // 初始化TabLayout
+        initTabLayout()
+    }
+
+    /**
+     * 初始化指数水平滚动列表
+     */
+    private fun initIndexRecyclerView() {
+        rv_index.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        indexAdapter = IndexListAdapter()
+        rv_index.adapter = indexAdapter
+    }
+
+    /**
+     * 初始化TabLayout
+     */
+    private fun initTabLayout() {
+        tl_fund_type.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab?) {
+                currentTabIndex = tab?.position ?: 0
+                viewModel.dispatch(FundListIntent.SwitchTab(currentTabIndex))
+                viewModel.dispatch(FundListIntent.RefreshData)
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab?) {}
+            override fun onTabReselected(tab: TabLayout.Tab?) {}
+        })
     }
 
     /**
@@ -125,7 +160,6 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
                 viewHolder: RecyclerView.ViewHolder,
                 target: RecyclerView.ViewHolder
             ): Boolean {
-                // 不支持拖拽，返回false
                 return false
             }
 
@@ -134,20 +168,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
                 if (position != RecyclerView.NO_POSITION) {
                     val fundInfo = createAdapter?.data?.get(position)
                     if (fundInfo != null) {
-                        // 显示确认对话框
-                        AlertDialog.Builder(this@FundListActivity2)
-                            .setTitle("删除")
-                            .setMessage("确定删除该条目(${fundInfo.fundcode})?")
-                            .setNegativeButton("取消") { dialog, _ ->
-                                dialog.dismiss()
-                                // 恢复被滑动的item
-                                createAdapter?.notifyItemChanged(position)
-                            }
-                            .setPositiveButton("确定") { dialog, _ ->
-                                viewModel.dispatch(FundListIntent.DeleteFund(fundInfo.fundcode))
-                                createAdapter?.removeAt(position)
-                            }
-                            .show()
+                        showDeleteConfirmDialog(fundInfo, position)
                     }
                 }
             }
@@ -195,6 +216,80 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         itemTouchHelper.attachToRecyclerView(recycleView)
     }
 
+    /**
+     * 显示删除确认对话框（优化版）
+     */
+    private fun showDeleteConfirmDialog(fundInfo: FundInfo, position: Int) {
+        val contentView = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 40, 40, 24)
+            setBackgroundResource(R.drawable.bg_dialog_rounded)
+        }
+
+        val titleText = TextView(this).apply {
+            text = "\u5220\u9664\u786e\u8ba4"
+            textSize = 18f
+            setTextColor(Color.parseColor("#333333"))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+        contentView.addView(titleText)
+
+        val msgText = TextView(this).apply {
+            text = "\u786e\u5b9a\u5220\u9664 ${fundInfo.name}(${fundInfo.fundcode})?"
+            textSize = 14f
+            setTextColor(Color.parseColor("#666666"))
+            setPadding(0, 20, 0, 0)
+        }
+        contentView.addView(msgText)
+
+        val btnLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.END
+            setPadding(0, 32, 0, 0)
+        }
+
+        val dialog = Dialog(this).apply {
+            setContentView(contentView)
+            window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setCanceledOnTouchOutside(false)
+            setCancelable(false)
+        }
+
+        val cancelBtn = TextView(this).apply {
+            text = "\u53d6\u6d88"
+            textSize = 14f
+            setTextColor(Color.parseColor("#999999"))
+            setPadding(32, 16, 32, 16)
+            setOnClickListener {
+                dialog.dismiss()
+                createAdapter?.notifyItemChanged(position)
+            }
+        }
+
+        val confirmBtn = TextView(this).apply {
+            text = "\u5220\u9664"
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.parseColor("#FF4444"))
+            setPadding(40, 16, 40, 16)
+            setOnClickListener {
+                viewModel.dispatch(FundListIntent.DeleteFund(fundInfo.fundcode))
+                createAdapter?.removeAt(position)
+                dialog.dismiss()
+            }
+        }
+
+        btnLayout.addView(cancelBtn)
+        btnLayout.addView(confirmBtn)
+        contentView.addView(btnLayout)
+
+        dialog.show()
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.85).toInt(),
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
+    }
+
     override fun initListener() {
         // 下拉刷新
         swipeRefreshLayout.setOnRefreshListener {
@@ -221,7 +316,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             }
         }
 
-        // 添加按钮 - 显示二级菜单
+        // 添加按钮
         tv_add.setOnClickListener {
             showPopupMenu(it)
         }
@@ -231,28 +326,27 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             showSearchDialog()
         }
     }
+
     override fun initData() {
-
-
+        // 初始化时加载指数数据
+        viewModel.dispatch(FundListIntent.LoadIndexData)
     }
+
     /** 显示菜单弹出框 */
     private fun showPopupMenu(anchor: View) {
         val popupView = layoutInflater.inflate(R.layout.popup_menu, null)
         val popupWindow = PopupWindow(popupView, LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT, true)
 
-        // 单个添加
         popupView.findViewById<TextView>(R.id.tv_single_add).setOnClickListener {
             popupWindow.dismiss()
             showAddDialog()
         }
 
-        // 批量导入
         popupView.findViewById<TextView>(R.id.tv_batch_import).setOnClickListener {
             popupWindow.dismiss()
             openFilePicker()
         }
 
-        // 导出模板
         popupView.findViewById<TextView>(R.id.tv_export_template).setOnClickListener {
             popupWindow.dismiss()
             exportTemplate()
@@ -271,7 +365,6 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         try {
             startActivityForResult(intent, REQUEST_CODE_IMPORT)
         } catch (e: Exception) {
-            // 如果没有xlsx选择器，使用通用的
             val intent2 = Intent(Intent.ACTION_GET_CONTENT)
             intent2.type = "*/*"
             intent2.addCategory(Intent.CATEGORY_OPENABLE)
@@ -284,23 +377,18 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         lifecycleScope.launch {
             try {
                 val uri = ExcelImportHelper.exportTemplate(this@FundListActivity2)
-                
-                // 分享文件
+
                 val shareIntent = Intent(Intent.ACTION_SEND).apply {
                     type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     putExtra(Intent.EXTRA_STREAM, uri)
                     addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                 }
-                
+
                 startActivity(Intent.createChooser(shareIntent, "分享模板到"))
-                
+
             } catch (e: Exception) {
                 LogUtils.e("导出模板失败", e)
-                AlertDialog.Builder(this@FundListActivity2)
-                    .setTitle("导出失败")
-                    .setMessage(e.message)
-                    .setPositiveButton("确定", null)
-                    .show()
+                showAlertDialog("导出失败", e.message ?: "未知错误")
             }
         }
     }
@@ -311,45 +399,124 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         if (resultCode == RESULT_OK && data != null) {
             val uri = data.data
             if (requestCode == REQUEST_CODE_IMPORT && uri != null) {
-                importFromExcel(uri)
+                showImportCategoryDialog(uri)
             }
         }
     }
 
+    /** 显示导入分类选择对话框 */
+    private fun showImportCategoryDialog(uri: Uri) {
+        val contentView = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 40, 40, 24)
+            setBackgroundResource(R.drawable.bg_dialog_rounded)
+        }
+
+        val titleText = TextView(this).apply {
+            text = "\u5bfc\u5165\u5230"
+            textSize = 18f
+            setTextColor(Color.parseColor("#333333"))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+        contentView.addView(titleText)
+
+        val radioGroup = RadioGroup(this).apply {
+            orientation = RadioGroup.VERTICAL
+            setPadding(0, 16, 0, 0)
+        }
+
+        val rbSelf = RadioButton(this).apply {
+            id = View.generateViewId()
+            text = "\u81ea\u9009"
+            textSize = 14f
+            setTextColor(Color.parseColor("#333333"))
+            setButtonDrawable(resources.getDrawable(R.drawable.selector_radio, theme))
+            setPadding(40, 12, 0, 12)
+            isChecked = true
+        }
+        radioGroup.addView(rbSelf)
+
+        val rbOther = RadioButton(this).apply {
+            id = View.generateViewId()
+            text = "\u5176\u4ed6\u57fa\u91d1"
+            textSize = 14f
+            setTextColor(Color.parseColor("#333333"))
+            setButtonDrawable(resources.getDrawable(R.drawable.selector_radio, theme))
+            setPadding(40, 12, 0, 12)
+        }
+        radioGroup.addView(rbOther)
+
+        contentView.addView(radioGroup)
+
+        val btnLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.END
+            setPadding(0, 24, 0, 0)
+        }
+
+        val cancelBtn = TextView(this).apply {
+            text = "\u53d6\u6d88"
+            textSize = 14f
+            setTextColor(Color.parseColor("#999999"))
+            setPadding(32, 16, 32, 16)
+        }
+
+        val confirmBtn = TextView(this).apply {
+            text = "\u5bfc\u5165"
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.parseColor("#1677FF"))
+            setPadding(40, 16, 40, 16)
+        }
+
+        val dialog = Dialog(this).apply {
+            setContentView(contentView)
+            window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setCancelable(true)
+            setCanceledOnTouchOutside(true)
+        }
+
+        cancelBtn.setOnClickListener { dialog.dismiss() }
+        confirmBtn.setOnClickListener {
+            val fundType = if (radioGroup.indexOfChild(
+                    radioGroup.findViewById(radioGroup.checkedRadioButtonId)
+                ) == 0) 0 else 1
+            dialog.dismiss()
+            importFromExcel(uri, fundType)
+        }
+
+        btnLayout.addView(cancelBtn)
+        btnLayout.addView(confirmBtn)
+        contentView.addView(btnLayout)
+
+        dialog.show()
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.85).toInt(),
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
+    }
+
     /** 从Excel导入基金 */
-    private fun importFromExcel(uri: Uri) {
+    private fun importFromExcel(uri: Uri, fundType: Int = 0) {
         lifecycleScope.launch {
             try {
                 val fundCodes = ExcelImportHelper.importFromExcel(this@FundListActivity2, uri)
                 if (fundCodes.isEmpty()) {
-                    AlertDialog.Builder(this@FundListActivity2)
-                        .setTitle("导入失败")
-                        .setMessage("未找到有效的基金代码")
-                        .setPositiveButton("确定", null)
-                        .show()
+                    showAlertDialog("导入失败", "未找到有效的基金代码")
                     return@launch
                 }
 
-                // 批量添加基金
                 var successCount = 0
                 for (code in fundCodes) {
-                    viewModel.dispatch(FundListIntent.SaveFundCode(code, 0, 0.0))
+                    viewModel.dispatch(FundListIntent.SaveFundCode(code, 0, 0.0, fundType))
                     successCount++
                 }
 
-                AlertDialog.Builder(this@FundListActivity2)
-                    .setTitle("导入成功")
-                    .setMessage("成功导入 $successCount 只基金\n请下拉刷新获取数据")
-                    .setPositiveButton("确定", null)
-                    .show()
+                showAlertDialog("导入成功", "成功导入 $successCount 只基金\n请下拉刷新获取数据")
 
             } catch (e: Exception) {
                 LogUtils.e("导入Excel失败", e)
-                AlertDialog.Builder(this@FundListActivity2)
-                    .setTitle("导入失败")
-                    .setMessage("解析文件失败：${e.message}")
-                    .setPositiveButton("确定", null)
-                    .show()
+                showAlertDialog("导入失败", "解析文件失败：${e.message}")
             }
         }
     }
@@ -360,6 +527,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         val etSearch = view.findViewById<EditText>(R.id.et_search)
         val rvResult = view.findViewById<RecyclerView>(R.id.rv_search_result)
         val tvEmpty = view.findViewById<TextView>(R.id.tv_empty)
+        val tvCancel = view.findViewById<TextView>(R.id.tv_search_cancel)
 
         searchAdapter = FundListAdapter(null)
         rvResult.layoutManager = LinearLayoutManager(this)
@@ -374,7 +542,6 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             searchDialog?.dismiss()
         }
 
-        // 搜索监听
         etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -383,19 +550,34 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
                 if (keyword.isEmpty()) {
                     rvResult.visibility = View.GONE
                     tvEmpty.visibility = View.VISIBLE
-                    tvEmpty.text = "输入关键词搜索已添加的基金"
+                    tvEmpty.text = "\u8f93\u5165\u5173\u952e\u8bcd\u641c\u7d22\u5df2\u6dfb\u52a0\u7684\u57fa\u91d1"
                 } else {
                     searchLocal(keyword, rvResult, tvEmpty)
                 }
             }
         })
 
-        searchDialog = AlertDialog.Builder(this)
-            .setTitle("搜索基金")
-            .setView(view)
-            .setNegativeButton("取消", null)
-            .create()
-        searchDialog?.show()
+        tvCancel.setOnClickListener { searchDialog?.dismiss() }
+
+        val searchContentView = FrameLayout(this).apply {
+            setBackgroundResource(R.drawable.bg_dialog_rounded)
+            addView(view, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ))
+        }
+
+        searchDialog = Dialog(this).apply {
+            setContentView(searchContentView)
+            window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setCancelable(true)
+            setCanceledOnTouchOutside(true)
+            show()
+            window?.setLayout(
+                (resources.displayMetrics.widthPixels * 0.9).toInt(),
+                WindowManager.LayoutParams.WRAP_CONTENT
+            )
+        }
     }
 
     /** 搜索本地数据库 */
@@ -418,41 +600,83 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         }
     }
 
-    /** 显示添加对话框 */
+    /** 显示添加对话框（自定义美化版） */
     private fun showAddDialog() {
-        val view = layoutInflater.inflate(R.layout.fund_add_item, null)
-        val etFundCode = view.findViewById<EditText>(R.id.et_fund_code)
-        val cbHold = view.findViewById<CheckBox>(R.id.cb_hold)
-        val etFundMoney = view.findViewById<EditText>(R.id.et_fund_money)
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_add_fund, null)
+        // 包裹白色圆角背景
+        val wrapper = FrameLayout(this).apply {
+            setBackgroundResource(R.drawable.bg_dialog_rounded)
+            addView(view, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ))
+        }
+        val etFundCode = wrapper.findViewById<EditText>(R.id.et_fund_code)
+        val cbHold = wrapper.findViewById<CheckBox>(R.id.cb_hold)
+        val etFundMoney = wrapper.findViewById<EditText>(R.id.et_fund_money)
+        val rgFundType = wrapper.findViewById<RadioGroup>(R.id.rg_fund_type)
+        val tvCancel = wrapper.findViewById<TextView>(R.id.tv_cancel)
+        val tvConfirm = wrapper.findViewById<TextView>(R.id.tv_confirm)
+
+        // 设置初始Tab
+        if (currentTabIndex == 0) {
+            wrapper.findViewById<RadioButton>(R.id.rb_self_select).isChecked = true
+        } else {
+            wrapper.findViewById<RadioButton>(R.id.rb_other).isChecked = true
+        }
 
         cbHold.setOnCheckedChangeListener { _, isChecked ->
             etFundMoney.visibility = if (isChecked) View.VISIBLE else View.GONE
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("添加基金")
-            .setView(view)
-            .setNegativeButton("取消") { dialog, _ -> dialog.dismiss() }
-            .setPositiveButton("确定") { dialog, _ ->
-                val fundCode = etFundCode.text.toString().trim()
-                val isChecked = cbHold.isChecked
-                val fundMoney = etFundMoney.text.toString().trim()
-                val holdFlag = if (isChecked) 1 else 0
-                val holdMoney = if (fundMoney.isNotEmpty()) fundMoney.toDouble() else 0.0
-                viewModel.dispatch(FundListIntent.SaveFundCode(fundCode, holdFlag, holdMoney))
+        val dialog = Dialog(this).apply {
+            setContentView(wrapper)
+            window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setCancelable(true)
+            setCanceledOnTouchOutside(true)
+        }
+
+        tvCancel.setOnClickListener { dialog.dismiss() }
+        tvConfirm.setOnClickListener {
+            val fundCode = etFundCode.text.toString().trim()
+            if (fundCode.isEmpty()) {
+                etFundCode.error = "请输入基金代码"
+                return@setOnClickListener
             }
-            .show()
+            val isChecked = cbHold.isChecked
+            val fundMoney = etFundMoney.text.toString().trim()
+            val holdFlag = if (isChecked) 1 else 0
+            val holdMoney = if (fundMoney.isNotEmpty()) fundMoney.toDouble() else 0.0
+            val fundType = if (rgFundType.checkedRadioButtonId == R.id.rb_self_select) 0 else 1
+            viewModel.dispatch(FundListIntent.SaveFundCode(fundCode, holdFlag, holdMoney, fundType))
+            dialog.dismiss()
+        }
+
+        dialog.show()
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.88).toInt(),
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
     }
 
-    /** 显示编辑对话框 */
+    /** 显示编辑对话框（自定义美化版） */
     private fun showEditDialog(fundInfo: FundInfo) {
-        val view = layoutInflater.inflate(R.layout.fund_add_item, null)
-        val etFundCode = view.findViewById<EditText>(R.id.et_fund_code)
-        val cbHold = view.findViewById<CheckBox>(R.id.cb_hold)
-        val etFundMoney = view.findViewById<EditText>(R.id.et_fund_money)
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_edit_fund, null)
+        // 包裹白色圆角背景
+        val wrapper = FrameLayout(this).apply {
+            setBackgroundResource(R.drawable.bg_dialog_rounded)
+            addView(view, FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ))
+        }
+        val cbHold = wrapper.findViewById<CheckBox>(R.id.cb_hold)
+        val etFundMoney = wrapper.findViewById<EditText>(R.id.et_fund_money)
+        val tvFundName = wrapper.findViewById<TextView>(R.id.tv_fund_name)
+        val tvCancel = wrapper.findViewById<TextView>(R.id.tv_cancel)
+        val tvConfirm = wrapper.findViewById<TextView>(R.id.tv_confirm)
 
-        etFundCode.isEnabled = false
-        etFundCode.setText(fundInfo.fundcode)
+        tvFundName.text = "${fundInfo.name} (${fundInfo.fundcode})"
         etFundMoney.setText(MoneyUtils.formatMoney(fundInfo.holdMoney, 2))
         cbHold.isChecked = fundInfo.holdFlag == 1
         etFundMoney.visibility = if (cbHold.isChecked) View.VISIBLE else View.GONE
@@ -461,32 +685,96 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             etFundMoney.visibility = if (isChecked) View.VISIBLE else View.GONE
         }
 
-        AlertDialog.Builder(this)
-            .setTitle("修改")
-            .setView(view)
-            .setNegativeButton("取消") { dialog, _ -> dialog.dismiss() }
-            .setPositiveButton("确定") { dialog, _ ->
-                val isChecked = cbHold.isChecked
-                val fundMoney = etFundMoney.text.toString().trim()
-                fundInfo.holdFlag = if (isChecked) 1 else 0
-                fundInfo.holdMoney = if (isChecked && fundMoney.isNotEmpty()) fundMoney.toDouble() else 0.0
-                viewModel.dispatch(FundListIntent.Update(fundInfo))
-            }
-            .show()
+        val dialog = Dialog(this).apply {
+            setContentView(wrapper)
+            window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setCancelable(true)
+            setCanceledOnTouchOutside(true)
+        }
+
+        tvCancel.setOnClickListener { dialog.dismiss() }
+        tvConfirm.setOnClickListener {
+            val isChecked = cbHold.isChecked
+            val fundMoney = etFundMoney.text.toString().trim()
+            fundInfo.holdFlag = if (isChecked) 1 else 0
+            fundInfo.holdMoney = if (isChecked && fundMoney.isNotEmpty()) fundMoney.toDouble() else 0.0
+            viewModel.dispatch(FundListIntent.Update(fundInfo))
+            dialog.dismiss()
+        }
+
+        dialog.show()
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.88).toInt(),
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
+    }
+
+    /** 通用提示对话框 */
+    private fun showAlertDialog(title: String, message: String) {
+        val contentView = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(40, 40, 40, 24)
+            setBackgroundResource(R.drawable.bg_dialog_rounded)
+        }
+
+        val titleText = TextView(this).apply {
+            text = title
+            textSize = 18f
+            setTextColor(Color.parseColor("#333333"))
+            setTypeface(null, android.graphics.Typeface.BOLD)
+        }
+        contentView.addView(titleText)
+
+        val msgText = TextView(this).apply {
+            text = message
+            textSize = 14f
+            setTextColor(Color.parseColor("#666666"))
+            setPadding(0, 16, 0, 0)
+        }
+        contentView.addView(msgText)
+
+        val btnLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.END
+            setPadding(0, 28, 0, 0)
+        }
+
+        val dialog = Dialog(this).apply {
+            setContentView(contentView)
+            window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+            setCancelable(true)
+            setCanceledOnTouchOutside(true)
+        }
+
+        val okBtn = TextView(this).apply {
+            text = "\u786e\u5b9a"
+            textSize = 14f
+            setTextColor(Color.WHITE)
+            setBackgroundColor(Color.parseColor("#1677FF"))
+            setPadding(40, 16, 40, 16)
+            setOnClickListener { dialog.dismiss() }
+        }
+        btnLayout.addView(okBtn)
+        contentView.addView(btnLayout)
+
+        dialog.show()
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.85).toInt(),
+            WindowManager.LayoutParams.WRAP_CONTENT
+        )
     }
 
     /** 加载更多数据 */
     private fun loadMoreData() {
         val startIndex = (currentPage + 1) * pageSize
         if (startIndex >= allFundList.size) {
-            // 没有更多数据
             createAdapter?.loadMoreModule?.loadMoreEnd()
             return
         }
-        
+
         val endIndex = minOf(startIndex + pageSize, allFundList.size)
         val pageData = allFundList.subList(startIndex, endIndex)
-        
+
         currentPage++
         createAdapter?.addData(pageData)
         createAdapter?.loadMoreModule?.loadMoreComplete()
@@ -504,19 +792,20 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
                     is FundListUiState.InitSuccess -> {
                         allFundList = state.resData ?: emptyList()
                         currentPage = 0
-                        // 加载第一页
                         val firstPage = allFundList.take(pageSize)
                         createAdapter?.setNewInstance(firstPage.toMutableList())
                     }
                     is FundListUiState.LoadSuccess -> {
-                        // 单条数据更新或添加
+                        // 只处理当前Tab的数据
+                        if (state.fundType != currentTabIndex) return@collect
                         state.resData?.let { data ->
                             synchronized(TAG) {
                                 val existingIndex = createAdapter?.data?.indexOfFirst { it.fundcode == data.fundcode } ?: -1
                                 if (existingIndex >= 0) {
                                     createAdapter?.setData(existingIndex, data)
                                 } else {
-                                    createAdapter?.addData(data)
+                                    // 新基金插入到列表首位
+                                    createAdapter?.addData(0, data)
                                 }
                             }
                         }
@@ -531,6 +820,9 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
                         if (swipeRefreshLayout.isRefreshing) {
                             swipeRefreshLayout.isRefreshing = false
                         }
+                    }
+                    is FundListUiState.IndexDataLoaded -> {
+                        indexAdapter?.setNewInstance(state.indexList.toMutableList())
                     }
                 }
             }

@@ -32,7 +32,12 @@ data class FundInfo(
         @ColumnInfo(defaultValue = "1")
         var holdFlag: Int,
         @ColumnInfo(defaultValue = "0")
-        var holdMoney: Double
+        var holdMoney: Double,
+        /**
+         * 基金分类：0=自选，1=其他基金
+         */
+        @ColumnInfo(defaultValue = "0")
+        var fundType: Int
 
 )
 
@@ -87,5 +92,17 @@ data class FundDetail(
     val historyNetValues: List<FundHistoryNetValue>,
     val trendPoints: List<FundTrendPoint>,
     val holdings: List<FundHolding>
+)
+
+/**
+ * 指数行情数据
+ * 上证指数: sh000001, 深证成指: sz399001, 创业板指: sz399006, 科创50: sh000688
+ */
+data class IndexData(
+    val name: String,        // 指数名称，如"上证指数"
+    val code: String,        // 指数代码
+    val price: String,       // 当前点位
+    val change: String,      // 涨跌额
+    val changePercent: String // 涨跌幅
 )
 

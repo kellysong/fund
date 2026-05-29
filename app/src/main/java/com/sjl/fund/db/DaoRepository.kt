@@ -27,6 +27,10 @@ object DaoRepository {
         return listFundInfos
     }
 
+    fun listFundInfosByType(fundType: Int): MutableList<FundInfo>? {
+        return dao.listFundInfosByType(fundType)
+    }
+
     fun listFundCode(): MutableList<String>? {
         val fundCodes = dao.listFundCode()
         return fundCodes

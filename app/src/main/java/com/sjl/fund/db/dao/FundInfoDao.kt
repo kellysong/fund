@@ -28,6 +28,9 @@ interface FundInfoDao {
     @Query("SELECT * FROM fund_info order by sortId asc")
     fun listFundInfos(): MutableList<FundInfo>?
 
+    @Query("SELECT * FROM fund_info WHERE fundType = :fundType order by sortId asc")
+    fun listFundInfosByType(fundType: Int): MutableList<FundInfo>?
+
 
     @Query("SELECT fundcode FROM fund_info order by sortId asc")
     fun listFundCode(): MutableList<String>?

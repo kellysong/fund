@@ -5,17 +5,16 @@ import android.view.MenuItem
 import android.view.View
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.github.mikephil.charting.charts.HorizontalBarChart
 import com.github.mikephil.charting.charts.LineChart
-import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.components.MarkerView
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
+import com.github.mikephil.charting.data.BarData
+import com.github.mikephil.charting.data.BarDataSet
+import com.github.mikephil.charting.data.BarEntry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
-import com.github.mikephil.charting.data.PieData
-import com.github.mikephil.charting.data.PieDataSet
-import com.github.mikephil.charting.data.PieEntry
-import com.github.mikephil.charting.formatter.PercentFormatter
 import com.github.mikephil.charting.formatter.ValueFormatter
 import com.github.mikephil.charting.highlight.Highlight
 import com.github.mikephil.charting.utils.ColorTemplate
@@ -81,7 +80,7 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
         tv_fund_code.text = fundCode
 
         initLineChart()
-        initPieChart()
+        initBarChart()
 
         holdingsAdapter = FundHoldingsAdapter()
         rv_holdings.layoutManager = LinearLayoutManager(this)
@@ -175,17 +174,11 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
         })
 
         viewModel.realTimeValue.observe(this, Observer { (gsz, gszzl, gztime) ->
-            // 显示当日涨幅标签
-            val changeValue = gszzl.replace("%", "").toFloatOrNull() ?: 0f
-            tv_daily_change.text = if (changeValue >= 0) "+$gszzl%" else "$gszzl%"
-            tv_daily_change.visibility = View.VISIBLE
-
-            // 设置涨跌幅颜色
-            val color = if (changeValue >= 0) Color.parseColor("#FFE54545") else Color.parseColor("#FF2EAC69")
-            tv_daily_change.setTextColor(color)
-
             // 更新顶部收益显示
+            val changeValue = gszzl.replace("%", "").toFloatOrNull() ?: 0f
             tv_change_percent.text = if (changeValue >= 0) "+$gszzl%" else "$gszzl%"
+            val color = if (changeValue >= 0) Color.parseColor("#FFE54545") else Color.parseColor("#FF2EAC69")
+            tv_change_percent.setTextColor(color)
         })
     }
 
@@ -284,8 +277,7 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
             color = lineColor
             setDrawCircles(false)
             lineWidth = 1.5f
-            mode = LineDataSet.Mode.CUBIC_BEZIER
-            cubicIntensity = 0.2f
+            mode = LineDataSet.Mode.LINEAR
             setDrawFilled(true)
             this.fillColor = fillColor
             fillAlpha = 30
@@ -305,56 +297,85 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
         line_chart.animateX(400)
     }
 
-    // ---- 饼图 ----
+    // ---- 水平柱状图（资产分布） ----
 
-    private fun initPieChart() {
-        pie_chart.apply {
+    private fun initBarChart() {
+        bar_chart.apply {
             description.isEnabled = false
-            isDrawHoleEnabled = true
-            setHoleColor(Color.WHITE)
-            holeRadius = 40f
-            transparentCircleRadius = 45f
-            setDrawCenterText(true)
-            centerText = "持仓分布"
-            setCenterTextSize(12f)
-            setCenterTextColor(Color.parseColor("#333333"))
-            legend.isEnabled = true
-            legend.textSize = 10f
-            legend.formSize = 10f
+            setTouchEnabled(false)
+            setDrawValueAboveBar(true)
+            legend.isEnabled = false
+
+            xAxis.apply {
+                position = com.github.mikephil.charting.components.XAxis.XAxisPosition.BOTTOM
+                setDrawGridLines(false)
+                textColor = Color.parseColor("#999999")
+                textSize = 10f
+                granularity = 1f
+            }
+
+            axisLeft.apply {
+                setDrawGridLines(true)
+                gridColor = Color.parseColor("#EEEEEE")
+                textColor = Color.parseColor("#999999")
+                textSize = 10f
+                valueFormatter = object : ValueFormatter() {
+                    override fun getFormattedValue(value: Float): String {
+                        return String.format("%.1f%%", value)
+                    }
+                }
+            }
+            axisRight.isEnabled = false
+            setExtraOffsets(4f, 8f, 4f, 8f)
         }
     }
 
     private fun updateAssetAllocation(holdings: List<FundHolding>) {
         if (holdings.isEmpty()) return
 
-        val entries = mutableListOf<PieEntry>()
+        val entries = mutableListOf<BarEntry>()
+        val labels = mutableListOf<String>()
         val colors = mutableListOf<Int>()
-        var otherPercent = 100f
 
+        // 取前10条
         holdings.take(10).forEachIndexed { index, holding ->
             val pct = holding.JZBL.replace("%", "").toFloatOrNull() ?: 0f
             if (pct > 0) {
-                entries.add(PieEntry(pct, holding.GPJC))
+                entries.add(BarEntry(index.toFloat(), pct))
+                labels.add(holding.GPJC)
                 colors.add(ColorTemplate.MATERIAL_COLORS[index % ColorTemplate.MATERIAL_COLORS.size])
-                otherPercent -= pct
             }
         }
 
-        if (otherPercent > 0 && otherPercent < 100f) {
-            entries.add(PieEntry(otherPercent, "其他"))
-            colors.add(Color.parseColor("#CCCCCC"))
+        if (entries.isEmpty()) return
+
+        // X轴标签
+        bar_chart.xAxis.apply {
+            valueFormatter = object : ValueFormatter() {
+                override fun getFormattedValue(value: Float): String {
+                    val idx = value.toInt()
+                    return if (idx in labels.indices) labels[idx] else ""
+                }
+            }
         }
 
-        val dataSet = PieDataSet(entries, "").apply {
+        val dataSet = BarDataSet(entries, "").apply {
             this.colors = colors
             setDrawValues(true)
             valueTextSize = 10f
-            valueTextColor = Color.WHITE
-            valueFormatter = PercentFormatter(pie_chart)
+            valueTextColor = Color.parseColor("#333333")
+            valueFormatter = object : ValueFormatter() {
+                fun getBarFormattedValue(value: Float): String {
+                    return String.format("%.2f%%", value)
+                }
+            }
         }
 
-        pie_chart.data = PieData(dataSet)
-        pie_chart.invalidate()
+        bar_chart.data = BarData(dataSet).apply {
+            barWidth = 0.6f
+        }
+        bar_chart.invalidate()
+        bar_chart.animateY(400)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
