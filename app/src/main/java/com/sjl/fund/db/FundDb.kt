@@ -21,7 +21,7 @@ import com.sjl.fund.entity.FundInfo
 
 @Database(entities = [
     FundInfo::class
-], version = 3)
+], version = 4)
 abstract class FundDb : RoomDatabase() {
 
     abstract val userLoginDao: FundInfoDao
@@ -38,7 +38,7 @@ abstract class FundDb : RoomDatabase() {
 
         private fun buildDatabase(): FundDb = Room.databaseBuilder(ViewUtils.getContext()
                 , FundDb::class.java, "fund.db")
-                .addMigrations(MIGRATION_1_TO_2, MIGRATION_2_TO_3)
+                .addMigrations(MIGRATION_1_TO_2, MIGRATION_2_TO_3, MIGRATION_3_TO_4)
                 .allowMainThreadQueries() // 允许主线程执行SQL语句
                 .build()
         //https://www.jianshu.com/p/41272f319ae7?utm_campaign=maleskine
@@ -51,6 +51,11 @@ abstract class FundDb : RoomDatabase() {
         val MIGRATION_2_TO_3: Migration = object : Migration(2, 3) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("alter table fund_info add column fundType INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+        val MIGRATION_3_TO_4: Migration = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("alter table fund_info add column createTime INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

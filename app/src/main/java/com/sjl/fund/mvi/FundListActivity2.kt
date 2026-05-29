@@ -508,7 +508,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
 
                 var successCount = 0
                 for (code in fundCodes) {
-                    viewModel.dispatch(FundListIntent.SaveFundCode(code, 0, 0.0, fundType))
+                    viewModel.dispatch(FundListIntent.SaveFundCode(code, 0, 0.0, fundType,1))
                     successCount++
                 }
 
@@ -648,7 +648,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             val holdFlag = if (isChecked) 1 else 0
             val holdMoney = if (fundMoney.isNotEmpty()) fundMoney.toDouble() else 0.0
             val fundType = if (rgFundType.checkedRadioButtonId == R.id.rb_self_select) 0 else 1
-            viewModel.dispatch(FundListIntent.SaveFundCode(fundCode, holdFlag, holdMoney, fundType))
+            viewModel.dispatch(FundListIntent.SaveFundCode(fundCode, holdFlag, holdMoney, fundType,1))
             dialog.dismiss()
         }
 
@@ -675,11 +675,19 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         val tvFundName = wrapper.findViewById<TextView>(R.id.tv_fund_name)
         val tvCancel = wrapper.findViewById<TextView>(R.id.tv_cancel)
         val tvConfirm = wrapper.findViewById<TextView>(R.id.tv_confirm)
+        val rgEditType = wrapper.findViewById<RadioGroup>(R.id.rg_edit_type)
 
         tvFundName.text = "${fundInfo.name} (${fundInfo.fundcode})"
         etFundMoney.setText(MoneyUtils.formatMoney(fundInfo.holdMoney, 2))
         cbHold.isChecked = fundInfo.holdFlag == 1
         etFundMoney.visibility = if (cbHold.isChecked) View.VISIBLE else View.GONE
+
+        // 设置当前所属分类
+        if (fundInfo.fundType == 0) {
+            wrapper.findViewById<RadioButton>(R.id.rb_edit_self).isChecked = true
+        } else {
+            wrapper.findViewById<RadioButton>(R.id.rb_edit_other).isChecked = true
+        }
 
         cbHold.setOnCheckedChangeListener { _, isChecked ->
             etFundMoney.visibility = if (isChecked) View.VISIBLE else View.GONE
@@ -698,7 +706,18 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             val fundMoney = etFundMoney.text.toString().trim()
             fundInfo.holdFlag = if (isChecked) 1 else 0
             fundInfo.holdMoney = if (isChecked && fundMoney.isNotEmpty()) fundMoney.toDouble() else 0.0
+            // 更新所属分类
+            val newFundType = if (rgEditType.checkedRadioButtonId == R.id.rb_edit_self) 0 else 1
+            val oldFundType = fundInfo.fundType
+            fundInfo.fundType = newFundType
             viewModel.dispatch(FundListIntent.Update(fundInfo))
+            // 分类变更立即从当前列表移除
+            if (oldFundType != newFundType) {
+                val idx = createAdapter?.data?.indexOfFirst { it.fundcode == fundInfo.fundcode } ?: -1
+                if (idx >= 0) {
+                    createAdapter?.removeAt(idx)
+                }
+            }
             dialog.dismiss()
         }
 
@@ -801,11 +820,19 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
                         state.resData?.let { data ->
                             synchronized(TAG) {
                                 val existingIndex = createAdapter?.data?.indexOfFirst { it.fundcode == data.fundcode } ?: -1
+                                LogUtils.i("update index: $existingIndex")
                                 if (existingIndex >= 0) {
                                     createAdapter?.setData(existingIndex, data)
                                 } else {
-                                    // 新基金插入到列表首位
-                                    createAdapter?.addData(0, data)
+                                    if (data.operateType == 1){
+                                        //1为新增基金
+                                        createAdapter?.addData(0,data)
+                                    }else{
+                                        // 新基金插入到列表首位
+                                        createAdapter?.addData(data)
+                                    }
+
+
                                 }
                             }
                         }
@@ -819,6 +846,13 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
                     is FundListUiState.LoadFinish -> {
                         if (swipeRefreshLayout.isRefreshing) {
                             swipeRefreshLayout.isRefreshing = false
+                        }
+                        // 网络加载完成后，同步allFundList与Adapter数据，确保分页排序一致
+                        createAdapter?.data?.let { adapterData ->
+                            if (adapterData.isNotEmpty()) {
+                                allFundList = adapterData.toList()
+                                createAdapter?.loadMoreModule?.loadMoreComplete()
+                            }
                         }
                     }
                     is FundListUiState.IndexDataLoaded -> {

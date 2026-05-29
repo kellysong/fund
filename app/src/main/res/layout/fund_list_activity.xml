@@ -38,8 +38,8 @@
                 android:id="@+id/iv_search"
                 android:layout_width="48dp"
                 android:layout_height="match_parent"
-                android:padding="12dp"
                 android:background="?android:attr/selectableItemBackgroundBorderless"
+                android:scaleType="centerInside"
                 android:src="@drawable/ic_search"
                 android:tint="@color/white" />
 
@@ -51,7 +51,7 @@
                 android:background="?android:attr/selectableItemBackgroundBorderless"
                 android:text="+"
                 android:textColor="@color/white"
-                android:textSize="24sp" />
+                android:textSize="30sp" />
         </LinearLayout>
     </RelativeLayout>
 

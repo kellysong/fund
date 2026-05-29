@@ -50,7 +50,8 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
                         it.fundCode,
                         it.holdFlag,
                         it.fundMoney,
-                        it.fundType
+                        it.fundType,
+                        it.operateType
                     )
                     is FundListIntent.LoadIndexData -> loadIndexData()
                     is FundListIntent.SwitchTab -> {
@@ -102,7 +103,7 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
             listFundCodeList?.let {
                 LogUtils.i("基金数量：${it.size},\t$it")
                 for ((index, value) in it.withIndex()) {
-                    requestServer(value.fundcode, value.sortId, value.holdFlag, value.holdMoney, value.fundType)
+                    requestServer(value.fundcode, value.sortId, value.holdFlag, value.holdMoney, value.fundType, value.createTime,value.operateType)
                 }
             }
 
@@ -130,7 +131,9 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
         sortId: Int,
         holdFlag: Int,
         fundMoney: Double,
-        fundType: Int
+        fundType: Int,
+        createTime: Long = 0L,
+        operateType: Int
     ) {
         ApiRepository.getFundInfo(fundCode, System.currentTimeMillis())
             .map {
@@ -152,6 +155,8 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
                 it.holdFlag = holdFlag
                 it.holdMoney = fundMoney
                 it.fundType = fundType
+                it.createTime = createTime
+                it.operateType = operateType
                 _viewState.emit(FundListUiState.LoadSuccess(it, fundType))
                 insertFund(it)
             }
@@ -196,12 +201,13 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
     }
 
 
-    fun saveFundCode(fundCode: String, holdFlag: Int, fundMoney: Double, fundType: Int) {
+    fun saveFundCode(fundCode: String, holdFlag: Int, fundMoney: Double, fundType: Int, operateType: Int) {
         if (TextUtils.isEmpty(fundCode)) {
             return
         }
         launchUI({
-            requestServer(fundCode, 0, holdFlag, fundMoney, fundType)
+            val newSortId = getMaxSortId()
+            requestServer(fundCode, newSortId, holdFlag, fundMoney, fundType, System.currentTimeMillis(),operateType)
         })
     }
 
@@ -234,7 +240,7 @@ sealed class FundListIntent {
     data class SortData(val data: MutableList<FundInfo>) : FundListIntent()
     data class DeleteFund(val fundCode: String) : FundListIntent()
     data class Update(val fundInfo: FundInfo) : FundListIntent()
-    data class SaveFundCode(val fundCode: String, val holdFlag: Int, val fundMoney: Double, val fundType: Int = 0) :
+    data class SaveFundCode(val fundCode: String, val holdFlag: Int, val fundMoney: Double, val fundType: Int = 0, val operateType: Int = 0) :
         FundListIntent()
 }
 

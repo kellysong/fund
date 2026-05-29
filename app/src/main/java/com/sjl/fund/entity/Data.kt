@@ -1,7 +1,9 @@
 package com.sjl.fund.entity
 
+import android.graphics.Bitmap
 import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Ignore
 import androidx.room.PrimaryKey
 
 /**
@@ -37,9 +39,17 @@ data class FundInfo(
          * 基金分类：0=自选，1=其他基金
          */
         @ColumnInfo(defaultValue = "0")
-        var fundType: Int
+        var fundType: Int,
+        /**
+         * 添加时间戳，用于按添加时间降序排列
+         */
+        @ColumnInfo(defaultValue = "0")
+        var createTime: Long = 0L,
 
-)
+){
+    @Ignore  // 将忽略的字段放在类体内
+    var operateType: Int = 0
+}
 
 /**
  * 基金历史净值数据
