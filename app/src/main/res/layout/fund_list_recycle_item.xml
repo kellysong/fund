@@ -4,6 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@android:color/white"
+    android:orientation="vertical"
     android:padding="@dimen/dp_2">
 
     <RelativeLayout
@@ -144,4 +145,8 @@
             </LinearLayout>
         </LinearLayout>
     </RelativeLayout>
+    <View
+        android:layout_width="match_parent"
+        android:background="@color/gray_300"
+        android:layout_height="@dimen/dp_0_5"/>
 </LinearLayout>

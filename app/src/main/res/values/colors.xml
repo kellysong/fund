@@ -6,5 +6,10 @@
     <color name="color_FFE6E6E6">#9666</color>
 
     <color name="color_light_blue">#00DDB6</color>
-
+    <color name="gray_200">#eeeeee</color>
+    <color name="gray_300">#E0E0E0</color>
+    <color name="gray_600">#757575</color>
+    <color name="gray_700">#616161</color>
+    <color name="gray_800">#424242</color>
+    <color name="gray_900">#212121</color>
 </resources>

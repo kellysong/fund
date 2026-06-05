@@ -227,7 +227,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         }
 
         val titleText = TextView(this).apply {
-            text = "\u5220\u9664\u786e\u8ba4"
+            text = "删除确认"
             textSize = 18f
             setTextColor(Color.parseColor("#333333"))
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -235,7 +235,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         contentView.addView(titleText)
 
         val msgText = TextView(this).apply {
-            text = "\u786e\u5b9a\u5220\u9664 ${fundInfo.name}(${fundInfo.fundcode})?"
+            text = "确定删除 ${fundInfo.name}(${fundInfo.fundcode})?"
             textSize = 14f
             setTextColor(Color.parseColor("#666666"))
             setPadding(0, 20, 0, 0)
@@ -256,7 +256,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         }
 
         val cancelBtn = TextView(this).apply {
-            text = "\u53d6\u6d88"
+            text = "取消"
             textSize = 14f
             setTextColor(Color.parseColor("#999999"))
             setPadding(32, 16, 32, 16)
@@ -267,10 +267,10 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         }
 
         val confirmBtn = TextView(this).apply {
-            text = "\u5220\u9664"
+            text = "删除"
             textSize = 14f
             setTextColor(Color.WHITE)
-            setBackgroundColor(Color.parseColor("#FF4444"))
+            setBackgroundColor(Color.parseColor("#1677FF"))
             setPadding(40, 16, 40, 16)
             setOnClickListener {
                 viewModel.dispatch(FundListIntent.DeleteFund(fundInfo.fundcode))
@@ -295,6 +295,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         swipeRefreshLayout.setOnRefreshListener {
             swipeRefreshLayout.isRefreshing = true
             viewModel.dispatch(FundListIntent.RefreshData)
+            viewModel.dispatch(FundListIntent.LoadIndexData)
         }
 
         // 列表点击进入详情
