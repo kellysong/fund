@@ -4,8 +4,8 @@ ext {
             buildToolsVersion: "30.0.2",
             minSdkVersion    : 26,
             targetSdkVersion : 30,
-            versionCode      : 7,
-            versionName      : "1.2.1",
+            versionCode      : 8,
+            versionName      : "1.2.2",
             applicationId    : "com.sjl.fund"
     ]
 

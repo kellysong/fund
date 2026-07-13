@@ -30,8 +30,11 @@ class FundFromDb : FundDataSource {
     }
 
     override fun sortFund(data: MutableList<FundInfo>) {
-        data.forEachIndexed{index: Int, fundInfo: FundInfo ->
+      /*  data.forEachIndexed{index: Int, fundInfo: FundInfo ->
             fundInfo.sortId = index;
+        }*/
+        data.forEachIndexed { index, fundInfo ->
+            fundInfo.sortId = data.size - 1 - index
         }
         DaoRepository.insertList(data)
     }
