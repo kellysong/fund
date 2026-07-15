@@ -120,6 +120,12 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
 
         // 初始化TabLayout
         initTabLayout()
+
+        // 顶部指数点击 -> 进入板块主力资金流向二级页面（不论点击哪个指数）
+        indexAdapter?.setOnItemClickListener { _, _, _ ->
+            val intent = Intent(this@FundListActivity2, SectorFlowActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     /**

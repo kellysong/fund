@@ -116,3 +116,28 @@ data class IndexData(
     val changePercent: String // 涨跌幅
 )
 
+/**
+ * 板块主力资金流向数据
+ * 数据来源：天天基金/东方财富 push2.eastmoney.com 板块资金流接口
+ * @property code 板块代码 (f12)
+ * @property name 板块名称 (f14)
+ * @property changePercent 涨跌幅(%) (f3)
+ * @property mainNetInflow 主力净流入(元) (f62)
+ * @property mainNetInflowPercent 主力净占比(%) (f184)
+ * @property extraLargeNetInflow 超大单净流入(元) (f66)
+ * @property largeNetInflow 大单净流入(元) (f72)
+ * @property mediumNetInflow 中单净流入(元) (f78)
+ * @property smallNetInflow 小单净流入(元) (f84)
+ */
+data class SectorFlowData(
+    val code: String,
+    val name: String,
+    val changePercent: Double,
+    val mainNetInflow: Double,
+    val mainNetInflowPercent: Double,
+    val extraLargeNetInflow: Double,
+    val largeNetInflow: Double,
+    val mediumNetInflow: Double,
+    val smallNetInflow: Double
+)
+

@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#F5F5F5">
+
+    <!-- 标题栏 -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@color/colorPrimary"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <ImageView
+            android:id="@+id/iv_back"
+            android:layout_width="@dimen/dp_48"
+            android:layout_height="match_parent"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_menu_back"
+            android:tint="@color/white" />
+
+        <TextView
+            android:id="@+id/tv_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:text="板块资金流向"
+            android:textColor="@color/white"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/iv_refresh"
+            android:layout_width="@dimen/dp_48"
+            android:layout_height="match_parent"
+            android:layout_alignParentEnd="true"
+            android:background="?android:attr/selectableItemBackgroundBorderless"
+            android:scaleType="centerInside"
+            android:src="@drawable/ic_menu_refresh"
+            android:tint="@color/white" />
+    </RelativeLayout>
+
+    <!-- 板块分类 Tab: 行业 / 概念 / 地域 -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tl_board"
+        android:layout_width="match_parent"
+        android:layout_height="44dp"
+        android:background="#FFFFFF"
+        app:tabIndicatorColor="#1677FF"
+        app:tabIndicatorHeight="3dp"
+        app:tabMode="fixed"
+        app:tabGravity="fill"
+        app:tabSelectedTextColor="#1677FF"
+        app:tabTextColor="#666666"
+        app:tabTextAppearance="@style/TabTextStyle">
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="行业" />
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="概念" />
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="地域" />
+    </com.google.android.material.tabs.TabLayout>
+
+    <!-- 板块主力资金流向图 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="#FFFFFF"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingBottom="4dp"
+            android:text="主力净流入 Top15 (亿元)"
+            android:textColor="#333333"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <com.github.mikephil.charting.charts.HorizontalBarChart
+            android:id="@+id/chart"
+            android:layout_width="match_parent"
+            android:layout_height="400dp" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:background="#F5F5F5" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/rv_sector"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:overScrollMode="never"
+        android:background="#FFFFFF" />
+
+</LinearLayout>

@@ -47,6 +47,13 @@
             android:screenOrientation="portrait"
             android:label="基金详情" />
 
+        <!-- 板块主力资金流向二级页面 -->
+        <activity
+            android:name="com.sjl.fund.mvi.SectorFlowActivity"
+            android:parentActivityName="com.sjl.fund.mvi.FundListActivity2"
+            android:screenOrientation="portrait"
+            android:label="板块资金流向" />
+
 
         <!--Android 7.0需要使用FileProvider生成content:// Uri来替代file:// Uri-->
         <provider

@@ -37,7 +37,7 @@
 # 指定不去忽略包可见的库类的成员
 -dontskipnonpubliclibraryclassmembers
 #不进行优化，建议使用此选项，
--dontoptimize
+#-dontoptimize
  # 不进行预校验,Android不需要,可加快混淆速度。
 -dontpreverify
 
@@ -261,7 +261,15 @@ public static java.lang.String TABLENAME;
 #    @butterknife.* <methods>;
 #}
 
+# MPAndroidChart
+-keep class com.github.mikephil.charting.** { *; }
+-dontwarn com.github.mikephil.charting.**
 
+# 混淆编译gson TypeToken 序列化反序列化报错
+-keep class com.google.gson.reflect.TypeToken { *; }
+-keep class * extends com.google.gson.reflect.TypeToken
+
+#第三方集成
 
 
 # bugly 混淆

@@ -5,6 +5,7 @@ import okhttp3.ResponseBody
 import retrofit2.Call
 import retrofit2.Response
 import retrofit2.http.GET
+import retrofit2.http.Headers
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -97,6 +98,29 @@ interface Api {
     fun getIndexQuotes(
         @Query("fields") fields: String = "f2,f3,f4,f12,f14",
         @Query("secids") secids: String
+    ): Call<ResponseBody>
+
+    /**
+     * 获取板块主力资金流向（行业/概念/地域）
+     * https://push2.eastmoney.com/api/qt/clist/get?fs=m:90+t:2
+     * fs 板块类型: 行业=m:90+t:2, 概念=m:90+t:3, 地域=m:90+t:1
+     * fields: f12=代码, f14=名称, f3=涨跌幅, f62=主力净流入, f184=主力净占比,
+     *         f66=超大单, f72=大单, f78=中单, f84=小单
+     */
+    @GET("http://push2.eastmoney.com/api/qt/clist/get")
+    @Headers("User-Agent: Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36")
+    fun getSectorCapitalFlow(
+        @Query("cb") cb: String = "randomCallback",
+        @Query("pn") pn: Int = 1,
+        @Query("pz") pz: Int = 200,
+        @Query("po") po: Int = 1,
+        @Query("np") np: Int = 1,
+        @Query("fltt") fltt: Int = 2,
+        @Query("invt") invt: Int = 2,
+        @Query("ut") ut: String = "8dec03ba335b81bf4ebdf7f7426281",
+        @Query("fid") fid: String = "f62",
+        @Query(value = "fs", encoded = true) fs: String,
+        @Query("fields") fields: String = "f12,f14,f2,f3,f62,f184,f66,f72,f78,f84"
     ): Call<ResponseBody>
 
     @GET
