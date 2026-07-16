@@ -78,7 +78,7 @@ data class FundHolding(
     val GPDM: String,      // 股票代码
     val GPJC: String,      // 股票简称
     val JZBL: String,      // 净值占比
-    val PCTNVCHG: String,  // 持仓变动
+    var PCTNVCHG: String = "--",  // 持仓变动（较上期，需额外计算）
     var dailyChange: String = "--",  // 当日涨跌（需要额外获取）
     var marketValue: String = "--"   // 持仓市值
 )

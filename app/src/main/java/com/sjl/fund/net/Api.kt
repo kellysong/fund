@@ -38,18 +38,30 @@ interface Api {
     fun searchFundList(): Call<ResponseBody>
 
     /**
-     * 获取基金历史净值
-     * http://fund.eastmoney.com/f10/F10DataApi.aspx?type=lsjz&code=001970&page=1&per=20
-     * @param code 基金代码
-     * @param page 页码
-     * @param per 每页条数
+     * 获取基金历史净值（东方财富官方 JSON 接口，稳定可用）
+     * https://api.fund.eastmoney.com/f10/lsjz?fundCode=001970&pageIndex=1&pageSize=30
+     * 返回 JSON：{"Data":{"LSJZList":[{"FSRQ","DWJZ","LJJZ","JZZZL",...}],"TotalCount":N},...}
+     * 注意：必须带 Referer 头，否则接口返回空数据
+     *
+     * @param fundCode 基金代码
+     * @param pageIndex 页码（从1开始）
+     * @param pageSize 每页条数
+     * @param startDate 开始日期 yyyy-MM-dd（可选，留空为不限）
+     * @param endDate 结束日期 yyyy-MM-dd（可选，留空为不限）
+     * @param ts 时间戳，避免缓存
      */
-    @GET("http://fund.eastmoney.com/f10/F10DataApi.aspx")
+    @GET("https://api.fund.eastmoney.com/f10/lsjz")
+    @Headers(
+        "Referer: https://fund.eastmoney.com/",
+        "User-Agent: Mozilla/5.0"
+    )
     fun getFundHistoryNetValue(
-        @Query("type") type: String = "lsjz",
-        @Query("code") code: String,
-        @Query("page") page: Int = 1,
-        @Query("per") per: Int = 20
+        @Query("fundCode") fundCode: String,
+        @Query("pageIndex") pageIndex: Int = 1,
+        @Query("pageSize") pageSize: Int = 30,
+        @Query("startDate") startDate: String = "",
+        @Query("endDate") endDate: String = "",
+        @Query("_") ts: Long = System.currentTimeMillis()
     ): Call<ResponseBody>
 
     /**
@@ -67,9 +79,12 @@ interface Api {
      * @param topline 返回条数
      */
     @GET("http://fund.eastmoney.com/f10/FundArchivesDatas.aspx")
+    @Headers("Referer: https://fund.eastmoney.com/")
     fun getFundHoldings(
         @Query("type") type: String = "jjcc",
         @Query("code") code: String,
+        @Query("year") year: Int = 0,
+        @Query("month") month: Int = 0,
         @Query("topline") topline: Int = 10
     ): Call<ResponseBody>
 
@@ -123,6 +138,10 @@ interface Api {
         @Query("fields") fields: String = "f12,f14,f2,f3,f62,f184,f66,f72,f78,f84"
     ): Call<ResponseBody>
 
+    /**
+     * 新浪财经行情接口需带 Referer，否则返回 403 Forbidden
+     */
     @GET
+    @Headers("Referer: https://finance.sina.com.cn")
     fun getSinaQuotes(@retrofit2.http.Url url: String): Call<ResponseBody>
 }

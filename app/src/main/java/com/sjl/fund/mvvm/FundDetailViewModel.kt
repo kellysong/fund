@@ -101,52 +101,45 @@ class FundDetailViewModel : BaseViewModel() {
     // ---- 历史净值 ----
     private suspend fun loadHistoryNetValue(fundCode: String) {
         try {
-            val response = RetrofitClient.api.getFundHistoryNetValue(code = fundCode, per = 30).await()
+            val response = RetrofitClient.api.getFundHistoryNetValue(
+                fundCode = fundCode,
+                pageSize = 30
+            ).await()
             val jsonStr = response.string()
 
-            val pattern = Pattern.compile("var apidata\\s*=\\s*(\\{.*?\\});", Pattern.DOTALL)
-            val matcher = pattern.matcher(jsonStr)
-            if (matcher.find()) {
-                val jsonObject = JSONObject(matcher.group(1))
-                val content = jsonObject.optString("content", "")
-                val list = parseHistoryNetValueFromHtml(content)
-                historyNetValues.postValue(list)
-                if (list.isNotEmpty()) {
-                    val latest = list.first()
-                    netValueInfo.postValue(Triple(latest.DWJZ, latest.LJJZ, latest.FSRQ))
-                }
+            val list = parseHistoryNetValueFromJson(jsonStr)
+            historyNetValues.postValue(list)
+            if (list.isNotEmpty()) {
+                val latest = list.first()
+                netValueInfo.postValue(Triple(latest.DWJZ, latest.LJJZ, latest.FSRQ))
             }
         } catch (e: Exception) {
             LogUtils.e("获取历史净值失败", e)
         }
     }
 
-    private fun parseHistoryNetValueFromHtml(html: String): List<FundHistoryNetValue> {
+    /**
+     * 解析东方财富历史净值 JSON 接口
+     * 返回结构：{"Data":{"LSJZList":[{"FSRQ","DWJZ","LJJZ","JZZZL",...}]},"Success":true,...}
+     * LSJZList 默认按日期降序（最新在前）
+     */
+    private fun parseHistoryNetValueFromJson(json: String): List<FundHistoryNetValue> {
         val list = mutableListOf<FundHistoryNetValue>()
         try {
-            val rowPattern = Pattern.compile("<tr[^>]*>(.*?)</tr>", Pattern.DOTALL)
-            val rowMatcher = rowPattern.matcher(html)
-            while (rowMatcher.find()) {
-                val row = rowMatcher.group(1) ?: continue
-                val cellPattern = Pattern.compile("<td[^>]*>(.*?)</td>", Pattern.DOTALL)
-                val cellMatcher = cellPattern.matcher(row)
-                val cells = mutableListOf<String>()
-                while (cellMatcher.find()) {
-                    var cell = cellMatcher.group(1) ?: ""
-                    cell = cell.replace(Regex("<[^>]+>"), "").trim()
-                    cells.add(cell)
-                }
-                if (cells.size >= 4 && cells[0].matches(Regex("\\d{4}-\\d{2}-\\d{2}"))) {
-                    list.add(FundHistoryNetValue(
-                        FSRQ = cells[0],
-                        DWJZ = cells[1],
-                        LJJZ = cells[2],
-                        JZZZL = cells[3]
-                    ))
-                }
+            val root = JSONObject(json)
+            val data = root.optJSONObject("Data") ?: return emptyList()
+            val lsjz = data.optJSONArray("LSJZList") ?: return emptyList()
+            for (i in 0 until lsjz.length()) {
+                val obj = lsjz.getJSONObject(i)
+                list.add(FundHistoryNetValue(
+                    FSRQ = obj.optString("FSRQ", ""),
+                    DWJZ = obj.optString("DWJZ", "--"),
+                    LJJZ = obj.optString("LJJZ", "--"),
+                    JZZZL = obj.optString("JZZZL", "--")
+                ))
             }
         } catch (e: Exception) {
-            LogUtils.e("解析历史净值HTML失败", e)
+            LogUtils.e("解析历史净值JSON失败", e)
         }
         return list
     }
@@ -272,8 +265,10 @@ class FundDetailViewModel : BaseViewModel() {
                 val jsonObject = JSONObject(matcher.group(1))
                 val content = jsonObject.optString("content", "")
                 val list = parseHoldingsFromHtml(content)
-                // 获取持仓股票的当日涨跌
+                // 获取持仓股票的当日涨跌（新浪接口计算涨跌幅）
                 fetchStockDailyChanges(list)
+                // 计算较上期变动（与上一报告期占净值比例对比）
+                fetchPreviousQuarterRatio(fundCode, content, list)
                 holdings.postValue(list)
             }
         } catch (e: Exception) {
@@ -282,7 +277,9 @@ class FundDetailViewModel : BaseViewModel() {
     }
 
     /**
-     * 为持仓股票获取当日涨跌数据
+     * 为持仓股票获取当日涨跌（涨跌幅）
+     * 新浪返回格式：var hq_str_sh688486="名称,今开,昨收,当前价,最高,最低,..."
+     * 用「当前价 - 昨收」/ 昨收 计算涨跌幅，避免直接取涨跌额字段（该字段已偏移/不可靠）
      */
     private suspend fun fetchStockDailyChanges(holdings: List<FundHolding>) {
         if (holdings.isEmpty()) return
@@ -303,18 +300,17 @@ class FundDetailViewModel : BaseViewModel() {
             val rawData = reader.readText()
             reader.close()
 
-            // 解析股票数据：var hq_str_sh601398="名称,开盘,昨收,当前价,...涨跌额,涨跌幅,..."
+            // 解析股票数据：var hq_str_sh601398="名称,今开,昨收,当前价,..."
             val pattern = Regex("""var hq_str_(\w+)="([^"]+)"""")
             val changeMap = mutableMapOf<String, String>()
             for (match in pattern.findAll(rawData)) {
                 val prefixCode = match.groupValues[1]  // sh601398
                 val fields = match.groupValues[2].split(",")
-                if (fields.size >= 34) {
-                    // 涨跌幅在索引32位置
-                    val changePercent = fields[32].trim()
-                    if (changePercent.isNotEmpty()) {
-                        changeMap[prefixCode] = "$changePercent%"
-                    }
+                val prevClose = fields.getOrNull(2)?.toFloatOrNull()  // 昨收
+                val curPrice = fields.getOrNull(3)?.toFloatOrNull()   // 当前价
+                if (prevClose != null && prevClose > 0 && curPrice != null) {
+                    val pct = (curPrice - prevClose) / prevClose * 100f
+                    changeMap[prefixCode] = formatChangePercent(pct)
                 }
             }
 
@@ -331,6 +327,94 @@ class FundDetailViewModel : BaseViewModel() {
         } catch (e: Exception) {
             LogUtils.e("获取股票行情失败", e)
         }
+    }
+
+    /**
+     * 计算持仓「较上期」变动：当前报告期占净值比例 - 上一报告期占净值比例
+     * jjcc 接口本身不含「较上期」列，需取上一报告期持仓对比得出
+     */
+    private suspend fun fetchPreviousQuarterRatio(
+        fundCode: String,
+        content: String,
+        holdings: List<FundHolding>
+    ) {
+        if (holdings.isEmpty()) return
+        try {
+            val cutoff = parseCutoffDate(content) ?: return
+            val (prevYear, prevMonth) = previousQuarterEnd(cutoff)
+            val resp = RetrofitClient.api.getFundHoldings(
+                code = fundCode, year = prevYear, month = prevMonth
+            ).await()
+            val prevRatios = parseRatioMap(resp.string())
+
+            for (holding in holdings) {
+                val cur = holding.JZBL.replace("%", "").toFloatOrNull() ?: continue
+                val prev = prevRatios[holding.GPDM]
+                holding.PCTNVCHG = if (prev == null) {
+                    "新进"   // 上期未持有
+                } else {
+                    formatChangePercent(cur - prev)
+                }
+            }
+        } catch (e: Exception) {
+            LogUtils.e("获取上期持仓失败", e)
+        }
+    }
+
+    /**
+     * 从持仓 HTML 中解析报告截止日期（如 2026-03-31）
+     */
+    private fun parseCutoffDate(content: String): String? {
+        val m = Regex("""截止至：<font[^>]*>(\d{4}-\d{2}-\d{2})""").find(content)
+        return m?.groupValues?.getOrNull(1)
+    }
+
+    /**
+     * 根据截止日期计算上一报告期（季度）的 year/month
+     * 例：2026-03-31 -> (2025,12)；2026-06-30 -> (2026,3)
+     */
+    private fun previousQuarterEnd(cutoff: String): Pair<Int, Int> {
+        val parts = cutoff.split("-")
+        if (parts.size < 2) return Pair(0, 0)
+        val y = parts[0].toIntOrNull() ?: return Pair(0, 0)
+        val m = parts[1].toIntOrNull() ?: return Pair(0, 0)
+        val q = (m - 1) / 3  // 0..3
+        return if (q == 0) Pair(y - 1, 12) else Pair(y, q * 3)
+    }
+
+    /**
+     * 从 jjcc 接口返回的 JSON 中解析「股票代码 -> 占净值比例」映射
+     */
+    private fun parseRatioMap(jsonStr: String): Map<String, Float> {
+        val map = mutableMapOf<String, Float>()
+        val apidataMatch = Regex("""var apidata\s*=\s*(\{.*?\});""", RegexOption.DOT_MATCHES_ALL).find(jsonStr)
+            ?: return map
+        val content = JSONObject(apidataMatch.groupValues[1]).optString("content", "")
+        val rowPattern = Pattern.compile("<tr[^>]*>(.*?)</tr>", Pattern.DOTALL)
+        val rowMatcher = rowPattern.matcher(content)
+        while (rowMatcher.find()) {
+            val row = rowMatcher.group(1) ?: continue
+            if (row.contains("股票代码") || row.contains("序号")) continue
+            val codeMatch = Regex("([0-9]{6})").find(row) ?: continue
+            val code = codeMatch.value
+            val texts = Regex(">([^<>]+)<").findAll(row)
+                .map { it.groupValues[1].replace("&nbsp;", "").trim() }
+                .filter { it.isNotEmpty() && it != "&nbsp;" }
+                .toList()
+            val ratio = texts.firstOrNull { t ->
+                val f = t.replace("%", "").toFloatOrNull()
+                f != null && f in 0f..100f && t.contains("%")
+            }
+            ratio?.let {
+                val f = it.replace("%", "").toFloatOrNull()
+                if (f != null) map[code] = f
+            }
+        }
+        return map
+    }
+
+    private fun formatChangePercent(pct: Float): String {
+        return if (pct >= 0) String.format("+%.2f%%", pct) else String.format("%.2f%%", pct)
     }
 
     private fun parseHoldingsFromHtml(html: String): List<FundHolding> {
