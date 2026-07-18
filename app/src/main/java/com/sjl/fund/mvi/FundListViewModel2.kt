@@ -12,12 +12,14 @@ import com.sjl.fund.entity.IndexData
 import com.sjl.fund.net.ApiRepository
 import com.sjl.fund.net.IndexRepository
 import com.sjl.fund.net.RetrofitClient
+import org.json.JSONObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import retrofit2.HttpException
+import retrofit2.await
 
 /**
  * 主页ViewModel - 支持双Tab和指数行情
@@ -143,6 +145,8 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
                 val end = string.lastIndexOf("}") + 1
                 val fundInfo =
                     RetrofitClient.gson.fromJson(string.substring(start, end), FundInfo::class.java)
+                // 用官方历史净值接口 lsjz 修正当前净值（fundgz 滞后/估值为准）
+                correctNetValueByLsjz(fundCode, fundInfo)
                 fundInfo
             }.catch { e ->
                 // 异常处理
@@ -162,6 +166,35 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
             }
 
 
+    }
+
+    /**
+     * 用官方历史净值接口 lsjz 的最新一条覆盖 fundgz 返回的净值字段。
+     * fundgz 的 dwjz 常滞后一天、gsz 为盘中估值，与支付宝单位净值对不上；
+     * lsjz 已验证与支付宝一致（返回 Data.LSJZList[0]：FSRQ/DWJZ/JZZZL）。
+     */
+    private suspend fun correctNetValueByLsjz(fundCode: String, fundInfo: FundInfo) {
+        try {
+            val resp = RetrofitClient.api.getFundHistoryNetValue(
+                fundCode = fundCode, pageSize = 1
+            ).await()
+            val root = JSONObject(resp.string())
+            val data = root.optJSONObject("Data") ?: return
+            val lsjz = data.optJSONArray("LSJZList") ?: return
+            if (lsjz.length() == 0) return
+            val obj = lsjz.getJSONObject(0)
+            val dwjz = obj.optString("DWJZ", "")
+            val jzzzl = obj.optString("JZZZL", "")
+            val fsrq = obj.optString("FSRQ", "")
+            if (dwjz.isNotEmpty()) {
+                fundInfo.dwjz = dwjz
+                fundInfo.gsz = dwjz
+                fundInfo.gszzl = jzzzl
+                fundInfo.jzrq = fsrq
+            }
+        } catch (e: Exception) {
+            LogUtils.e("s:$fundCode,lsjz修正净值失败，沿用fundgz数据", e)
+        }
     }
 
 

@@ -89,6 +89,16 @@ interface Api {
     ): Call<ResponseBody>
 
     /**
+     * 获取基金资产配置（股票/债券/现金/其它占比）
+     * https://fundf10.eastmoney.com/zcpz_001970.html  （注意是下划线 zcpz_{code}.html，不是 zcpz/{code}.html）
+     * 返回完整 HTML 页面，内含 var chartData = {Dates:[...],GP:[...],ZQ:[...],XJ:[...],CTPZ:[...],...}
+     * GP=股票, ZQ=债券, XJ=现金, CTPZ=其它
+     */
+    @GET("https://fundf10.eastmoney.com/zcpz_{code}.html")
+    @Headers("Referer: https://fundf10.eastmoney.com/")
+    fun getAssetAllocation(@Path("code") code: String): Call<ResponseBody>
+
+    /**
      * 获取基金实时估值
      * http://fundgz.1234567.com.cn/js/001970.js?rt=1463558676006
      * 与getFundInfo相同，但用于明确获取实时估值场景

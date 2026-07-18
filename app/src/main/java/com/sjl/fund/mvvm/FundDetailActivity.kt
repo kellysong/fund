@@ -5,28 +5,29 @@ import android.view.MenuItem
 import android.view.View
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
-import com.github.mikephil.charting.charts.HorizontalBarChart
 import com.github.mikephil.charting.charts.LineChart
+import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.components.MarkerView
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.Entry
-import com.github.mikephil.charting.data.BarData
-import com.github.mikephil.charting.data.BarDataSet
-import com.github.mikephil.charting.data.BarEntry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
+import com.github.mikephil.charting.data.PieData
+import com.github.mikephil.charting.data.PieDataSet
+import com.github.mikephil.charting.data.PieEntry
 import com.github.mikephil.charting.formatter.ValueFormatter
 import com.github.mikephil.charting.highlight.Highlight
-import com.github.mikephil.charting.utils.ColorTemplate
 import com.github.mikephil.charting.utils.MPPointF
 import com.google.android.material.tabs.TabLayout
 import com.sjl.core.mvvm.BaseViewModelActivity
 import com.sjl.core.util.log.LogUtils
 import com.sjl.fund.R
+import com.sjl.fund.adapter.FundBondHoldingsAdapter
 import com.sjl.fund.adapter.FundHoldingsAdapter
 import com.sjl.fund.adapter.NetValueHistoryAdapter
 import com.sjl.fund.adapter.PerformanceAdapter
-import com.sjl.fund.entity.FundHolding
+import com.sjl.fund.entity.AssetAllocationSlice
+import com.sjl.fund.entity.FundBondHolding
 import com.sjl.fund.entity.FundHistoryNetValue
 import com.sjl.fund.entity.FundTrendPoint
 import kotlinx.android.synthetic.main.fund_detail_activity.*
@@ -50,6 +51,7 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
     private lateinit var fundName: String
 
     private var holdingsAdapter: FundHoldingsAdapter? = null
+    private var bondHoldingsAdapter: FundBondHoldingsAdapter? = null
     private var historyAdapter: NetValueHistoryAdapter? = null
     private var performanceAdapter: PerformanceAdapter? = null
 
@@ -80,12 +82,17 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
         tv_fund_code.text = fundCode
 
         initLineChart()
-        initBarChart()
+        initPieChart()
 
         holdingsAdapter = FundHoldingsAdapter()
         rv_holdings.layoutManager = LinearLayoutManager(this)
         rv_holdings.adapter = holdingsAdapter
         rv_holdings.isNestedScrollingEnabled = false
+
+        bondHoldingsAdapter = FundBondHoldingsAdapter()
+        rv_bond_holdings.layoutManager = LinearLayoutManager(this)
+        rv_bond_holdings.adapter = bondHoldingsAdapter
+        rv_bond_holdings.isNestedScrollingEnabled = false
 
         historyAdapter = NetValueHistoryAdapter()
         rv_net_value_history.layoutManager = LinearLayoutManager(this)
@@ -169,8 +176,17 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
 
         viewModel.holdings.observe(this, Observer { list ->
             holdingsAdapter?.setNewInstance(list.toMutableList())
-            tv_holdings_title.text = "基金持仓 (${list.size})"
-            updateAssetAllocation(list)
+            tv_holdings_title.text = "重仓股票 (${list.size})"
+        })
+
+        viewModel.bondHoldings.observe(this, Observer { list ->
+            bondHoldingsAdapter?.setNewInstance(list.toMutableList())
+            tv_bond_holdings_title.text = "重仓债券 (${list.size})"
+            tv_bond_empty.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+        })
+
+        viewModel.assetAllocation.observe(this, Observer { slices ->
+            updateAssetAllocation(slices)
         })
 
         viewModel.realTimeValue.observe(this, Observer { (gsz, gszzl, gztime) ->
@@ -297,85 +313,68 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
         line_chart.animateX(400)
     }
 
-    // ---- 水平柱状图（资产分布） ----
+    // ---- 饼图（资产分布：股票/债券/现金/其它） ----
 
-    private fun initBarChart() {
-        bar_chart.apply {
+    private fun initPieChart() {
+        pie_chart.apply {
             description.isEnabled = false
-            setTouchEnabled(false)
-            setDrawValueAboveBar(true)
-            legend.isEnabled = false
-
-            xAxis.apply {
-                position = com.github.mikephil.charting.components.XAxis.XAxisPosition.BOTTOM
-                setDrawGridLines(false)
-                textColor = Color.parseColor("#999999")
-                textSize = 10f
-                granularity = 1f
-            }
-
-            axisLeft.apply {
-                setDrawGridLines(true)
-                gridColor = Color.parseColor("#EEEEEE")
-                textColor = Color.parseColor("#999999")
-                textSize = 10f
-                valueFormatter = object : ValueFormatter() {
-                    override fun getFormattedValue(value: Float): String {
-                        return String.format("%.1f%%", value)
-                    }
-                }
-            }
-            axisRight.isEnabled = false
-            setExtraOffsets(4f, 8f, 4f, 8f)
+            setTouchEnabled(true)
+            isDrawHoleEnabled = true
+            setUsePercentValues(false)
+            setEntryLabelColor(Color.parseColor("#333333"))
+            setEntryLabelTextSize(11f)
+            legend.isEnabled = true
+            legend.textSize = 11f
+            legend.textColor = Color.parseColor("#666666")
+            legend.verticalAlignment = com.github.mikephil.charting.components.Legend.LegendVerticalAlignment.BOTTOM
+            legend.horizontalAlignment = com.github.mikephil.charting.components.Legend.LegendHorizontalAlignment.CENTER
+            legend.orientation = com.github.mikephil.charting.components.Legend.LegendOrientation.HORIZONTAL
+            legend.setDrawInside(false)
+            setExtraOffsets(8f, 8f, 8f, 8f)
         }
     }
 
-    private fun updateAssetAllocation(holdings: List<FundHolding>) {
-        if (holdings.isEmpty()) return
-
-        val entries = mutableListOf<BarEntry>()
-        val labels = mutableListOf<String>()
-        val colors = mutableListOf<Int>()
-
-        // 取前10条
-        holdings.take(10).forEachIndexed { index, holding ->
-            val pct = holding.JZBL.replace("%", "").toFloatOrNull() ?: 0f
-            if (pct > 0) {
-                entries.add(BarEntry(index.toFloat(), pct))
-                labels.add(holding.GPJC)
-                colors.add(ColorTemplate.MATERIAL_COLORS[index % ColorTemplate.MATERIAL_COLORS.size])
-            }
+    private fun updateAssetAllocation(slices: List<AssetAllocationSlice>) {
+        // 过滤掉占比为 0 的类别（如债券为 0 的基金不再显示“债券 0%”）
+        val valid = slices.filter { it.percent > 0f }
+        if (valid.isEmpty()) {
+            pie_chart.visibility = View.GONE
+            tv_asset_empty.visibility = View.VISIBLE
+            return
         }
+        pie_chart.visibility = View.VISIBLE
+        tv_asset_empty.visibility = View.GONE
 
-        if (entries.isEmpty()) return
-
-        // X轴标签
-        bar_chart.xAxis.apply {
-            valueFormatter = object : ValueFormatter() {
-                override fun getFormattedValue(value: Float): String {
-                    val idx = value.toInt()
-                    return if (idx in labels.indices) labels[idx] else ""
-                }
-            }
+        val colorMap = mapOf(
+            "股票" to Color.parseColor("#1677FF"),
+            "债券" to Color.parseColor("#52C41A"),
+            "现金" to Color.parseColor("#FAAD14"),
+            "其它" to Color.parseColor("#BFBFBF")
+        )
+        val entries = valid.map { slice ->
+            PieEntry(slice.percent, slice.name)
         }
+        val colors = valid.map { colorMap[it.name] ?: Color.parseColor("#BFBFBF") }
 
-        val dataSet = BarDataSet(entries, "").apply {
+        val dataSet = PieDataSet(entries, "").apply {
             this.colors = colors
             setDrawValues(true)
-            valueTextSize = 10f
-            valueTextColor = Color.parseColor("#333333")
+            valueTextSize = 11f
+            valueTextColor = Color.parseColor("#FFFFFF")
             valueFormatter = object : ValueFormatter() {
-                fun getBarFormattedValue(value: Float): String {
-                    return String.format("%.2f%%", value)
+                override fun getFormattedValue(value: Float): String {
+                    return if (value > 0) String.format("%.1f%%", value) else ""
                 }
             }
         }
 
-        bar_chart.data = BarData(dataSet).apply {
-            barWidth = 0.6f
-        }
-        bar_chart.invalidate()
-        bar_chart.animateY(400)
+        pie_chart.data = PieData(dataSet)
+        pie_chart.centerText = "资产配置"
+        pie_chart.setCenterTextSize(12f)
+        pie_chart.setCenterTextColor(Color.parseColor("#999999"))
+        pie_chart.notifyDataSetChanged()
+        pie_chart.invalidate()
+        pie_chart.animateY(400)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

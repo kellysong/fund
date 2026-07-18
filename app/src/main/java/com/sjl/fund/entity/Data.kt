@@ -21,11 +21,11 @@ import androidx.room.PrimaryKey
 data class FundInfo(
         @PrimaryKey
         val fundcode: String,
-        val dwjz: String,
-        val gsz: String,
-        val gszzl: String,
+        var dwjz: String,   // 单位净值（由历史净值接口 lsjz 修正，保证准确）
+        var gsz: String,    // 估值（同用 lsjz 最新确认净值，避免 fundgz 估值漂移）
+        var gszzl: String,  // 当日涨跌幅（由 lsjz 的 JZZZL 修正）
         val gztime: String,
-        val jzrq: String,
+        var jzrq: String,   // 净值日期（由 lsjz 的 FSRQ 修正）
         val name: String,
         var sortId: Int,
         /**
@@ -81,6 +81,24 @@ data class FundHolding(
     var PCTNVCHG: String = "--",  // 持仓变动（较上期，需额外计算）
     var dailyChange: String = "--",  // 当日涨跌（需要额外获取）
     var marketValue: String = "--"   // 持仓市值
+)
+
+/**
+ * 基金债券持仓信息（重仓债券）
+ */
+data class FundBondHolding(
+    val ZQDM: String,      // 债券代码
+    val ZQMC: String,      // 债券名称
+    val JZBL: String,      // 占净值比例
+    var PCTNVCHG: String = "--"  // 较上期变动（需对比上一报告期计算）
+)
+
+/**
+ * 资产配置占比（饼图切片）：股票/债券/现金/其它
+ */
+data class AssetAllocationSlice(
+    val name: String,    // 股票/债券/现金/其它
+    val percent: Float   // 占比(%)
 )
 
 /**

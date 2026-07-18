@@ -5,8 +5,10 @@ import com.sjl.core.mvvm.BaseViewModel
 import com.sjl.core.util.log.LogUtils
 import com.sjl.fund.entity.FundHistoryNetValue
 import com.sjl.fund.entity.FundHolding
+import com.sjl.fund.entity.FundBondHolding
 import com.sjl.fund.entity.FundPerformance
 import com.sjl.fund.entity.FundTrendPoint
+import com.sjl.fund.entity.AssetAllocationSlice
 import com.sjl.fund.net.RetrofitClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -35,6 +37,8 @@ class FundDetailViewModel : BaseViewModel() {
     val allTrendPoints = MutableLiveData<List<FundTrendPoint>>()
     val performances = MutableLiveData<List<FundPerformance>>()
     val holdings = MutableLiveData<List<FundHolding>>()
+    val bondHoldings = MutableLiveData<List<FundBondHolding>>()
+    val assetAllocation = MutableLiveData<List<AssetAllocationSlice>>()
     val netValueInfo = MutableLiveData<Triple<String, String, String>>() // 单位净值/累计净值/日期
     val realTimeValue = MutableLiveData<Triple<String, String, String>>() // 估值/涨跌幅/估值时间
     val error = MutableLiveData<Throwable>()
@@ -61,6 +65,8 @@ class FundDetailViewModel : BaseViewModel() {
                     loadHistoryNetValue(fundCode)
                     loadPerformanceTrendAndPerformance(fundCode)
                     loadHoldings(fundCode)
+                    loadBondHoldings(fundCode)
+                    loadAssetAllocation(fundCode)
                     loadRealTimeValue(fundCode)
                 }
             } catch (e: Exception) {
@@ -73,28 +79,23 @@ class FundDetailViewModel : BaseViewModel() {
     }
 
     /**
-     * 加载实时估值
+     * 加载当前净值与当日涨跌幅
+     * 注意：原先使用 getFundInfo（fundgz 接口），其 dwjz 常滞后一天、gsz 为盘中估值，
+     * 与支付宝的单位净值对不上。改用官方历史净值接口 lsjz 的最新一条（已验证与支付宝一致）。
      */
     private suspend fun loadRealTimeValue(fundCode: String) {
         try {
-            val response = RetrofitClient.api.getFundInfo(fundCode, System.currentTimeMillis()).await()
-            val jsonStr = response.string()
-
-            // 解析JSONP格式: jsonpgz({...})
-            val pattern = Pattern.compile("jsonpgz\\((\\{.*?\\})\\);")
-            val matcher = pattern.matcher(jsonStr)
-
-            if (matcher.find()) {
-                val jsonData = matcher.group(1)
-                val jsonObject = JSONObject(jsonData)
-                val gsz = jsonObject.optString("gsz", "--")      // 估算净值
-                val gszzl = jsonObject.optString("gszzl", "--") // 估算涨跌幅
-                val gztime = jsonObject.optString("gztime", "--") // 估值时间
-
-                realTimeValue.postValue(Triple(gsz, gszzl, gztime))
+            val response = RetrofitClient.api.getFundHistoryNetValue(
+                fundCode = fundCode, pageSize = 1
+            ).await()
+            val list = parseHistoryNetValueFromJson(response.string())
+            if (list.isNotEmpty()) {
+                val latest = list.first()
+                // gsz 字段复用为最新确认净值，gszzl 为当日涨跌幅，gztime 复用为净值日期
+                realTimeValue.postValue(Triple(latest.DWJZ, latest.JZZZL, latest.FSRQ))
             }
         } catch (e: Exception) {
-            LogUtils.e("获取实时估值失败", e)
+            LogUtils.e("获取实时净值失败", e)
         }
     }
 
@@ -253,27 +254,169 @@ class FundDetailViewModel : BaseViewModel() {
         return if (v >= 0) String.format("+%.2f%%", v) else String.format("%.2f%%", v)
     }
 
-    // ---- 基金持仓 ----
+    // ---- 基金持仓（重仓股票） ----
+    // 注意：getFundHoldings 不传 year/month 时，部分基金返回空数据，
+    // 必须按最新报告期（最近的季度末）请求才能拿到当前持仓。
     private suspend fun loadHoldings(fundCode: String) {
         try {
-            val response = RetrofitClient.api.getFundHoldings(code = fundCode).await()
-            val jsonStr = response.string()
-
-            val pattern = Pattern.compile("var apidata\\s*=\\s*(\\{.*?\\});", Pattern.DOTALL)
-            val matcher = pattern.matcher(jsonStr)
-            if (matcher.find()) {
-                val jsonObject = JSONObject(matcher.group(1))
-                val content = jsonObject.optString("content", "")
-                val list = parseHoldingsFromHtml(content)
-                // 获取持仓股票的当日涨跌（新浪接口计算涨跌幅）
-                fetchStockDailyChanges(list)
-                // 计算较上期变动（与上一报告期占净值比例对比）
-                fetchPreviousQuarterRatio(fundCode, content, list)
-                holdings.postValue(list)
+            var stockList: List<FundHolding>? = null
+            for ((y, m) in latestReportPeriods()) {
+                val response = RetrofitClient.api.getFundHoldings(
+                    code = fundCode, year = y, month = m
+                ).await()
+                val jsonStr = response.string()
+                val pattern = Pattern.compile("var apidata\\s*=\\s*(\\{.*?\\});", Pattern.DOTALL)
+                val matcher = pattern.matcher(jsonStr)
+                if (matcher.find()) {
+                    val jsonObject = JSONObject(matcher.group(1))
+                    val content = jsonObject.optString("content", "")
+                    val list = parseHoldingsFromHtml(content)
+                    if (list.isNotEmpty()) {
+                        // 获取持仓股票的当日涨跌（新浪接口计算涨跌幅）
+                        fetchStockDailyChanges(list)
+                        // 计算较上期变动（与上一报告期占净值比例对比）
+                        fetchPreviousQuarterRatio(fundCode, content, list)
+                        stockList = list
+                        break
+                    }
+                }
             }
+            stockList?.let { holdings.postValue(it) }
         } catch (e: Exception) {
             LogUtils.e("获取基金持仓失败", e)
         }
+    }
+
+    // ---- 重仓债券 ----
+    private suspend fun loadBondHoldings(fundCode: String) {
+        try {
+            var bondList: List<FundBondHolding>? = null
+            var bondContent: String? = null
+            for ((y, m) in latestReportPeriods()) {
+                val response = RetrofitClient.api.getFundHoldings(
+                    code = fundCode, type = "zqcc", year = y, month = m
+                ).await()
+                val jsonStr = response.string()
+                val pattern = Pattern.compile("var apidata\\s*=\\s*(\\{.*?\\});", Pattern.DOTALL)
+                val matcher = pattern.matcher(jsonStr)
+                if (matcher.find()) {
+                    val content = JSONObject(matcher.group(1)).optString("content", "")
+                    val list = parseBondHoldingsFromHtml(content)
+                    if (list.isNotEmpty()) {
+                        bondList = list
+                        bondContent = content
+                        break
+                    }
+                }
+            }
+            bondList?.let { list ->
+                // 计算「较上期」变动（对比上一报告期占净值比例）
+                fetchPreviousBondQuarterRatio(fundCode, bondContent ?: "", list)
+                bondHoldings.postValue(list)
+            }
+        } catch (e: Exception) {
+            LogUtils.e("获取债券持仓失败", e)
+        }
+    }
+
+    /**
+     * 计算债券持仓「较上期」变动：当前报告期占净值比例 - 上一报告期占净值比例
+     */
+    private suspend fun fetchPreviousBondQuarterRatio(
+        fundCode: String,
+        content: String,
+        holdings: List<FundBondHolding>
+    ) {
+        if (holdings.isEmpty()) return
+        try {
+            val cutoff = parseCutoffDate(content) ?: return
+            val (prevYear, prevMonth) = previousQuarterEnd(cutoff)
+            val resp = RetrofitClient.api.getFundHoldings(
+                code = fundCode, type = "zqcc", year = prevYear, month = prevMonth
+            ).await()
+            val prevContent = JSONObject(
+                Regex("var apidata\\s*=\\s*(\\{.*?\\});", RegexOption.DOT_MATCHES_ALL)
+                    .find(resp.string())?.groupValues?.getOrNull(1) ?: return
+            ).optString("content", "")
+            val prevRatios = parseBondRatioMap(prevContent)
+
+            for (holding in holdings) {
+                val cur = holding.JZBL.replace("%", "").toFloatOrNull() ?: continue
+                val prev = prevRatios[holding.ZQDM]
+                holding.PCTNVCHG = if (prev == null) {
+                    "新进"
+                } else {
+                    formatChangePercent(cur - prev)
+                }
+            }
+        } catch (e: Exception) {
+            LogUtils.e("获取债券上期持仓失败", e)
+        }
+    }
+
+    /**
+     * 从债券持仓 HTML 中解析「债券代码 -> 占净值比例」映射
+     */
+    private fun parseBondRatioMap(html: String): Map<String, Float> {
+        val map = mutableMapOf<String, Float>()
+        try {
+            val rowPattern = Pattern.compile("<tr[^>]*>(.*?)</tr>", Pattern.DOTALL)
+            val rowMatcher = rowPattern.matcher(html)
+            while (rowMatcher.find()) {
+                val row = rowMatcher.group(1) ?: continue
+                if (row.contains("债券代码") || row.contains("序号")) continue
+                val tds = Regex("<td[^>]*>(.*?)</td>", RegexOption.DOT_MATCHES_ALL).findAll(row)
+                    .map { it.groupValues[1].replace(Regex("<[^>]+>"), "").replace("&nbsp;", "").trim() }
+                    .filter { it.isNotEmpty() }
+                    .toList()
+                if (tds.size < 4) continue
+                val code = tds[1]
+                val ratioText = tds[3]
+                val f = ratioText.replace("%", "").toFloatOrNull()
+                if (code.isNotBlank() && f != null) map[code] = f
+            }
+        } catch (e: Exception) {
+            LogUtils.e("解析债券上期比例失败", e)
+        }
+        return map
+    }
+
+    // ---- 资产配置（股票/债券/现金/其它） ----
+    private suspend fun loadAssetAllocation(fundCode: String) {
+        try {
+            val response = RetrofitClient.api.getAssetAllocation(fundCode).await()
+            val html = response.string()
+            val slices = parseAssetAllocation(html)
+            assetAllocation.postValue(slices)
+        } catch (e: Exception) {
+            LogUtils.e("获取资产配置失败", e)
+        }
+    }
+
+    /**
+     * 生成最近的若干报告期(year, month)，按时间倒序，
+     * 用于兼容部分基金不传 year/month 时返回空数据的情况。
+     * 取当前日期往前推一个季度作为起点（留出披露延迟），再往前兜底3个季度。
+     */
+    private fun latestReportPeriods(): List<Pair<Int, Int>> {
+        val cal = Calendar.getInstance()
+        val y = cal.get(Calendar.YEAR)
+        val m = cal.get(Calendar.MONTH) + 1
+        val (baseY, baseM) = when {
+            m >= 4 -> y to (if (m >= 10) 9 else if (m >= 7) 6 else 3)
+            else -> (y - 1) to 12
+        }
+        val result = mutableListOf(baseY to baseM)
+        var cy = baseY
+        var cm = baseM
+        repeat(3) {
+            val pm = if (cm == 3) 12 else cm - 3
+            val py = if (cm == 3) cy - 1 else cy
+            result.add(py to pm)
+            cy = py
+            cm = pm
+        }
+        return result
     }
 
     /**
@@ -474,6 +617,66 @@ class FundDetailViewModel : BaseViewModel() {
         val num = value.replace("%", "").trim().toFloatOrNull()
         return if (num != null) String.format("%.2f%%", num) else value
     }
+
+    /**
+     * 解析债券持仓 HTML（type=zqcc）
+     * 结构：序号 | 债券代码 | 债券名称 | 占净值比例 | 持仓市值（万元）
+     * 债券代码可能为6或7位，故按 <td> 顺序提取，避免按固定6位正则截断。
+     */
+    private fun parseBondHoldingsFromHtml(html: String): List<FundBondHolding> {
+        val list = mutableListOf<FundBondHolding>()
+        try {
+            val rowPattern = Pattern.compile("<tr[^>]*>(.*?)</tr>", Pattern.DOTALL)
+            val rowMatcher = rowPattern.matcher(html)
+            while (rowMatcher.find()) {
+                val row = rowMatcher.group(1) ?: continue
+                if (row.contains("债券代码") || row.contains("序号")) continue // 跳过表头
+                val tds = Regex("<td[^>]*>(.*?)</td>", RegexOption.DOT_MATCHES_ALL).findAll(row)
+                    .map { it.groupValues[1].replace(Regex("<[^>]+>"), "").replace("&nbsp;", "").trim() }
+                    .filter { it.isNotEmpty() }
+                    .toList()
+                if (tds.size < 4) continue
+                val code = tds[1]
+                val name = tds[2]
+                val ratio = tds[3]
+                if (code.isBlank() || name.isBlank()) continue
+                list.add(FundBondHolding(ZQDM = code, ZQMC = name, JZBL = ratio))
+            }
+        } catch (e: Exception) {
+            LogUtils.e("解析债券持仓HTML失败", e)
+        }
+        return list
+    }
+
+    /**
+     * 从资产配置页面 HTML 解析 var chartData（GP/ZQ/XJ/CTPZ 各季度数组），
+     * 取最新一期作为饼图切片：股票/债券/现金/其它。
+     */
+    private fun parseAssetAllocation(html: String): List<AssetAllocationSlice> {
+        return try {
+            val m = Regex("var chartData\\s*=\\s*(\\{.*?\\});", RegexOption.DOT_MATCHES_ALL).find(html)
+                ?: return emptyList()
+            val json = JSONObject(m.groupValues[1])
+            val dates = json.optJSONArray("Dates") ?: return emptyList()
+            val last = dates.length() - 1
+            if (last < 0) return emptyList()
+            val gp = (json.optJSONArray("GP")?.optDouble(last) ?: 0.0).toFloat()
+            val zq = (json.optJSONArray("ZQ")?.optDouble(last) ?: 0.0).toFloat()
+            val xj = (json.optJSONArray("XJ")?.optDouble(last) ?: 0.0).toFloat()
+            // 「其它」= 100 - 股票 - 债券 - 现金（取非负，体现剩余占比）
+            val ctpz = maxOf(0f, 100f - gp - zq - xj)
+            listOf(
+                AssetAllocationSlice("股票", gp),
+                AssetAllocationSlice("债券", zq),
+                AssetAllocationSlice("现金", xj),
+                AssetAllocationSlice("其它", ctpz)
+            )
+        } catch (e: Exception) {
+            LogUtils.e("解析资产配置失败", e)
+            emptyList()
+        }
+    }
+
 
     private fun formatChange(change: String): String {
         val c = change.trim()

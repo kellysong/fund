@@ -11,6 +11,7 @@ import com.sjl.fund.data.FundFromSp
 import com.sjl.fund.entity.FundInfo
 import com.sjl.fund.net.ApiRepository
 import com.sjl.fund.net.RetrofitClient
+import org.json.JSONObject
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.map
@@ -68,6 +69,8 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
                       val data = RetrofitClient.api.getFundInfo(value.fundcode, System.currentTimeMillis())
                       val string = data.await().string()
                       val fundInfo =  RetrofitClient.gson.fromJson(string.substring(8, string.length - 2), FundInfo::class.java)
+                      // 用官方历史净值接口 lsjz 修正当前净值（fundgz 的 dwjz 滞后、gsz 为估值，不准）
+                      correctNetValueByLsjz(value.fundcode, fundInfo)
                       updateFundInfo.value = fundInfo
                       LogUtils.i("s:${value.fundcode},string:${string}")
                   }, { e ->
@@ -172,6 +175,35 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
     fun update(fundInfo: FundInfo) {
         insertFund(fundInfo)
         updateFundInfo.value = fundInfo
+    }
+
+    /**
+     * 用官方历史净值接口 lsjz 的最新一条覆盖 fundgz 返回的净值字段。
+     * fundgz 的 dwjz 常滞后一天、gsz 为盘中估值，与支付宝单位净值对不上；
+     * lsjz 已验证与支付宝一致（返回 Data.LSJZList[0]：FSRQ/DWJZ/JZZZL）。
+     */
+    private suspend fun correctNetValueByLsjz(fundCode: String, fundInfo: FundInfo) {
+        try {
+            val resp = RetrofitClient.api.getFundHistoryNetValue(
+                fundCode = fundCode, pageSize = 1
+            ).await()
+            val root = JSONObject(resp.string())
+            val data = root.optJSONObject("Data") ?: return
+            val lsjz = data.optJSONArray("LSJZList") ?: return
+            if (lsjz.length() == 0) return
+            val obj = lsjz.getJSONObject(0)
+            val dwjz = obj.optString("DWJZ", "")
+            val jzzzl = obj.optString("JZZZL", "")
+            val fsrq = obj.optString("FSRQ", "")
+            if (dwjz.isNotEmpty()) {
+                fundInfo.dwjz = dwjz
+                fundInfo.gsz = dwjz
+                fundInfo.gszzl = jzzzl
+                fundInfo.jzrq = fsrq
+            }
+        } catch (e: Exception) {
+            LogUtils.e("s:$fundCode,lsjz修正净值失败，沿用fundgz数据", e)
+        }
     }
 
 

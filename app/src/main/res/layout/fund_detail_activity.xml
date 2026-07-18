@@ -457,18 +457,30 @@
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
-                    <com.github.mikephil.charting.charts.HorizontalBarChart
-                        android:id="@+id/bar_chart"
+                    <com.github.mikephil.charting.charts.PieChart
+                        android:id="@+id/pie_chart"
                         android:layout_width="match_parent"
-                        android:layout_height="200dp"
+                        android:layout_height="220dp"
                         android:layout_marginTop="12dp" />
+
+                    <TextView
+                        android:id="@+id/tv_asset_empty"
+                        android:layout_width="match_parent"
+                        android:layout_height="220dp"
+                        android:layout_marginTop="12dp"
+                        android:gravity="center"
+                        android:text="暂无资产配置数据"
+                        android:textColor="#999999"
+                        android:textSize="14sp"
+                        android:visibility="gone" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- 基金持仓卡片 -->
+            <!-- 重仓股票卡片 -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
                 app:cardCornerRadius="8dp"
                 app:cardElevation="1dp">
 
@@ -482,7 +494,7 @@
                         android:id="@+id/tv_holdings_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="基金持仓"
+                        android:text="重仓股票"
                         android:textColor="#333333"
                         android:textSize="16sp"
                         android:textStyle="bold" />
@@ -540,6 +552,85 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:nestedScrollingEnabled="false" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- 重仓债券卡片 -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="8dp"
+                app:cardElevation="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/tv_bond_holdings_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="重仓债券"
+                        android:textColor="#333333"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1.8"
+                            android:text="债券名称"
+                            android:textColor="#999999"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="end"
+                            android:text="持仓占比"
+                            android:textColor="#999999"
+                            android:textSize="12sp" />
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="end"
+                            android:text="较上期"
+                            android:textColor="#999999"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="8dp"
+                        android:background="#EEEEEE" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rv_bond_holdings"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:nestedScrollingEnabled="false" />
+
+                    <TextView
+                        android:id="@+id/tv_bond_empty"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="暂无债券持仓"
+                        android:textColor="#999999"
+                        android:textSize="12sp"
+                        android:visibility="gone" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
