@@ -26,9 +26,9 @@ data class FundInfo(
         var dwjz: String,   // 最新确认单位净值（来自 lsjz 接口）
         var gsz: String,    // 盘中实时估值（来自 fundgz 接口，交易时段有效）
         var gszzl: String,  // 盘中估值涨跌幅（来自 fundgz 接口）
-        val gztime: String,
+        var gztime: String,
         var jzrq: String,   // 确认净值日期（来自 lsjz 接口）
-        val name: String,
+        var name: String,
         var sortId: Int,
         /**
          * 0未持有，1持有

@@ -38,9 +38,10 @@ class FundListAdapter(data: List<FundInfo>?) : BaseQuickAdapter<FundInfo, BaseVi
                     .setText(R.id.tv_jz_v1, fundInfo.dwjz)
                     .setText(R.id.tv_jz_v2, fundInfo.jzzzl)
 
-                    .setText(R.id.tv_gz_date, fundInfo.gztime)
-                    .setText(R.id.tv_gz_v1, fundInfo.gsz)
-                    .setText(R.id.tv_gz_v2, fundInfo.gszzl)
+                    // 今日估值：海外/QDII 基金新浪无实时数据，缺失时显示“—”
+                    .setText(R.id.tv_gz_date, if (fundInfo.gsz.isEmpty()) "—" else fundInfo.gztime)
+                    .setText(R.id.tv_gz_v1, if (fundInfo.gsz.isEmpty()) "—" else fundInfo.gsz)
+                    .setText(R.id.tv_gz_v2, if (fundInfo.gsz.isEmpty()) "—" else fundInfo.gszzl)
                     .setGone(R.id.tv_hold, fundInfo.holdFlag == 0)
             if (fundInfo.holdFlag == 0) {
                 setGone(R.id.tv_money_title, true).setGone(R.id.tv_hold_money, true)
@@ -59,11 +60,18 @@ class FundListAdapter(data: List<FundInfo>?) : BaseQuickAdapter<FundInfo, BaseVi
         } else if (!TextUtils.isEmpty(fundInfo.jzzzl)) {
             baseViewHolder.setTextColor(R.id.tv_jz_v2, Color.RED)
         }
-        // 盘中估值涨跌幅红绿色
-        if (!TextUtils.isEmpty(fundInfo.gszzl) && fundInfo.gszzl.toDouble() > 0) {
-            baseViewHolder.setTextColor(R.id.tv_gz_v2, Color.RED)
-        } else {
-            baseViewHolder.setTextColor(R.id.tv_gz_v2, Color.GREEN)
+        // 盘中估值涨跌幅红绿色（海外基金无数据时 gszzl 为“—”，不做着色）
+        if (!TextUtils.isEmpty(fundInfo.gszzl) && fundInfo.gsz.isNotEmpty()) {
+            val gz = try {
+                fundInfo.gszzl.toDouble()
+            } catch (e: Exception) {
+                null
+            }
+            if (gz != null && gz > 0) {
+                baseViewHolder.setTextColor(R.id.tv_gz_v2, Color.RED)
+            } else {
+                baseViewHolder.setTextColor(R.id.tv_gz_v2, Color.GREEN)
+            }
         }
 
     }

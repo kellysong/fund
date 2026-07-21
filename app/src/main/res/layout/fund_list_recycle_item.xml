@@ -57,16 +57,16 @@
 
                 <TextView
                     android:id="@+id/tv_jz_date"
-                    android:layout_width="@dimen/dp_120"
+                    android:layout_width="@dimen/dp_125"
                     android:layout_height="wrap_content"
-                    android:layout_marginLeft="@dimen/dp_20"
+                    android:layout_marginLeft="@dimen/dp_10"
                     tools:text="04-09" />
 
                 <TextView
                     android:id="@+id/tv_jz_v1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
+                    android:gravity="left"
                     android:layout_marginLeft="@dimen/dp_10"
                     tools:text="1.1610" />
 
@@ -91,16 +91,16 @@
 
                 <TextView
                     android:id="@+id/tv_gz_date"
-                    android:layout_width="@dimen/dp_120"
-                    android:layout_height="wrap_content"
-                    android:layout_marginLeft="@dimen/dp_20"
+                    android:layout_width="@dimen/dp_125"
+                    android:layout_height="21dp"
+                    android:layout_marginLeft="@dimen/dp_10"
                     tools:text="04-12 11:04" />
 
                 <TextView
                     android:id="@+id/tv_gz_v1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_weight="1"
+                    android:gravity="left"
                     android:layout_marginLeft="@dimen/dp_10"
                     tools:text="1.1510" />
 

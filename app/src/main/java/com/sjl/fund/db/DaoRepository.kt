@@ -43,4 +43,8 @@ object DaoRepository {
     fun getMaxSortId(): Int {
         return dao.getMaxSortId()
     }
+
+    fun getFundInfo(fundcode: String): FundInfo? {
+        return dao.getFundInfo(fundcode)
+    }
 }

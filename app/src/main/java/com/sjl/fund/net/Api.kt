@@ -31,11 +31,40 @@ interface Api {
     fun getFundInfo(@Path("code") code: String, @Query("rt") rt: Long): Call<ResponseBody>
 
     /**
+     * 基金净值获取接口（替代已下架的 getFundInfo / fundgz 实时估值接口）
+     * 使用新浪财经行情接口 fu_，返回盘中实时估值、估值涨跌幅与更新时间，
+     * 满足盘中净值展示需求（天天基金官方实时估值已下线，改用新浪）。
+     * 注意：新浪返回为 GBK 编码，数字字段不受影响；需携带 Referer 否则 403。
+     */
+    @GET("https://hq.sinajs.cn/list=fu_{code}")
+    @Headers(
+        "Referer: https://finance.sina.com.cn/",
+        "User-Agent: Mozilla/5.0"
+    )
+    fun getFundInfoV2(@Path("code") code: String): Call<ResponseBody>
+
+    /**
      * 所有基金名称列表代码
      * @return Call<ResponseBody>
      */
     @GET("http://fund.eastmoney.com/js/fundcode_search.js")
     fun searchFundList(): Call<ResponseBody>
+
+    /**
+     * 按基金代码查询基金名称（东方财富搜索接口，支持海外/QDII 基金）
+     * https://fundsuggest.eastmoney.com/FundSearch/api/FundSearchAPI.ashx?m=1&key=016702
+     * 返回 JSON：{"Datas":[{"CODE":"016702","NAME":"银华海外数字经济...","FundBaseInfo":{...}}],...}
+     * 用途：新浪 fu_ 接口不覆盖海外基金，拿不到名称时，用此接口兜底。
+     */
+    @GET("https://fundsuggest.eastmoney.com/FundSearch/api/FundSearchAPI.ashx")
+    @Headers(
+        "Referer: https://fund.eastmoney.com/",
+        "User-Agent: Mozilla/5.0"
+    )
+    fun getFundNameByCode(
+        @Query("m") m: Int = 1,
+        @Query("key") key: String
+    ): Call<ResponseBody>
 
     /**
      * 获取基金历史净值（东方财富官方 JSON 接口，稳定可用）

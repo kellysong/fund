@@ -79,23 +79,30 @@ class FundDetailViewModel : BaseViewModel() {
     }
 
     /**
-     * 加载盘中涨跌幅（来自 getFundInfo / fundgz 接口）
+     * 加载盘中实时估值（替代已下架的 getFundInfo / fundgz 接口，改用新浪行情接口 fu_）
      */
     private suspend fun loadRealTimeValue(fundCode: String) {
         try {
-            val response = RetrofitClient.api.getFundInfo(fundCode, System.currentTimeMillis()).await()
-            val jsonStr = response.string()
-
-            val pattern = Pattern.compile("jsonpgz\\((\\{.*?\\})\\);")
-            val matcher = pattern.matcher(jsonStr)
-            if (matcher.find()) {
-                val jsonObject = JSONObject(matcher.group(1))
-                val gszzl = jsonObject.optString("gszzl", "--")
-                val gztime = jsonObject.optString("gztime", "--")
-                realTimeValue.postValue(Triple("", gszzl, gztime))
+            val response = RetrofitClient.api.getFundInfoV2(fundCode).await()
+            val text = response.string()
+            val start = text.indexOf("\"")
+            val end = text.lastIndexOf("\"")
+            if (start >= 0 && end > start) {
+                val parts = text.substring(start + 1, end).split(",")
+                if (parts.size >= 8) {
+                    val gsz = parts[2]
+                    val gszzl = try {
+                        // 盘中估值涨跌幅保留两位小数
+                        String.format("%.2f", parts[6].toDouble())
+                    } catch (e: Exception) {
+                        parts[6]
+                    }
+                    val gztime = parts[1]
+                    realTimeValue.postValue(Triple(gsz, gszzl, gztime))
+                }
             }
         } catch (e: Exception) {
-            LogUtils.e("获取实时估值失败", e)
+            LogUtils.e("获取盘中估值失败", e)
         }
     }
 

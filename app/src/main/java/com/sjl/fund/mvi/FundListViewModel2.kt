@@ -9,6 +9,7 @@ import com.sjl.fund.data.FundFromDb
 import com.sjl.fund.data.FundFromSp
 import com.sjl.fund.entity.FundInfo
 import com.sjl.fund.entity.IndexData
+import com.sjl.fund.db.DaoRepository
 import com.sjl.fund.net.ApiRepository
 import com.sjl.fund.net.IndexRepository
 import com.sjl.fund.net.RetrofitClient
@@ -139,16 +140,28 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
         createTime: Long = 0L,
         operateType: Int
     ) {
-        ApiRepository.getFundInfo(fundCode, System.currentTimeMillis())
-            .map {
-                val string = it.string()
-                LogUtils.i("string:${string}")
-                val start = string.indexOf("{")
-                val end = string.lastIndexOf("}") + 1
-                val fundInfo =
-                    RetrofitClient.gson.fromJson(string.substring(start, end), FundInfo::class.java)
-                // 用官方历史净值接口 lsjz 修正当前净值（fundgz 滞后/估值为准）
+        ApiRepository.getFundInfoV2(fundCode)
+        .map {
+            // 新浪返回为 GBK 编码，按 GBK 解码以获取正确的中文基金名称（数字字段为 ASCII，不受影响）
+            val json = String(it.source().readByteArray(), charset("GBK"))
+            LogUtils.i("string:${json}")
+                // lsjz 接口不含基金名称，名称取自数据库已有记录
+                val existName = DaoRepository.getFundInfo(fundCode)?.name ?: ""
+                val fundInfo = FundInfo(
+                    fundcode = fundCode,
+                    name = existName,
+                    dwjz = "", gsz = "", gszzl = "", gztime = "", jzrq = "",
+                    sortId = 0, holdFlag = 1, holdMoney = 0.0, fundType = 0
+                )
+                // 用新浪盘中估值填充
+                // 盘中估值（新浪）
+                ApiRepository.applySinaFundInfo(json, fundInfo)
+                // 确认净值 + 昨日涨跌幅（东方财富 lsjz，对应“上次净值”区）
                 correctNetValueByLsjz(fundCode, fundInfo)
+                // 海外/QDII 基金新浪无数据，名称兜底用东方财富搜索接口
+                if (fundInfo.name.isEmpty()) {
+                    ApiRepository.getFundNameByCode(fundCode)?.let { fundInfo.name = it }
+                }
                 fundInfo
             }.catch { e ->
                 // 异常处理

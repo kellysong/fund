@@ -64,19 +64,25 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
 
             for ((index, value) in listFundCodeList.withIndex()) {
 
-                //方法一
-                  catchException({
-                      val data = RetrofitClient.api.getFundInfo(value.fundcode, System.currentTimeMillis())
-                      val string = data.await().string()
-                      val fundInfo =  RetrofitClient.gson.fromJson(string.substring(8, string.length - 2), FundInfo::class.java)
-                      // 用官方历史净值接口 lsjz 修正当前净值（fundgz 的 dwjz 滞后、gsz 为估值，不准）
-                      correctNetValueByLsjz(value.fundcode, fundInfo)
-                      updateFundInfo.value = fundInfo
-                      LogUtils.i("s:${value.fundcode},string:${string}")
-                  }, { e ->
-                      LogUtils.e("s:${value.fundcode},请求异常", e)
-                      deleteFund(value.fundcode)
-                  })
+                // 方法一：盘中估值用新浪 getFundInfoV2，确认净值 + 昨日涨跌幅用东方财富 lsjz
+                try {
+                    val fundInfo = value // 数据库已有记录，含基金名称
+                    // 新浪返回为 GBK 编码，按 GBK 解码以获取正确的中文基金名称
+                    val responseBody = RetrofitClient.api.getFundInfoV2(value.fundcode).await()
+                    val resp = String(responseBody.source().readByteArray(), charset("GBK"))
+                    // 新浪盘中估值（海外基金无数据，gsz 等为空，不影响其它字段）
+                    ApiRepository.applySinaFundInfo(resp, fundInfo)
+                    // 用 lsjz 填充“上次净值”区（dwjz/jzrq/jzzzl）
+                    correctNetValueByLsjz(value.fundcode, fundInfo)
+                    // 海外/QDII 基金新浪无数据，名称兜底用东方财富搜索接口
+                    if (fundInfo.name.isEmpty()) {
+                        ApiRepository.getFundNameByCode(value.fundcode)?.let { fundInfo.name = it }
+                    }
+                    updateFundInfo.value = fundInfo
+                } catch (e: Exception) {
+                    LogUtils.e("s:${value.fundcode},净值获取失败", e)
+                    // 估值接口异常不再删除基金，避免误删持仓记录
+                }
                 //方法二：转为Flow
 
 //                requestServer(value.fundcode, value.sortId, value.holdFlag, value.holdMoney)
@@ -196,10 +202,10 @@ class FundListViewModel : BaseViewModel(), FundDataSource {
             val jzzzl = obj.optString("JZZZL", "")
             val fsrq = obj.optString("FSRQ", "")
             if (dwjz.isNotEmpty()) {
-                fundInfo.dwjz = dwjz
-                fundInfo.gsz = dwjz
-                fundInfo.gszzl = jzzzl
-                fundInfo.jzrq = fsrq
+                fundInfo.dwjz = dwjz     // 确认净值
+                fundInfo.jzrq = fsrq     // 确认净值日期
+                fundInfo.jzzzl = jzzzl   // 确认净值日涨跌幅（昨日）
+                // gsz/gszzl/gztime 保留新浪盘中估值，不再覆盖
             }
         } catch (e: Exception) {
             LogUtils.e("s:$fundCode,lsjz修正净值失败，沿用fundgz数据", e)
