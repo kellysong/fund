@@ -57,18 +57,17 @@
 
                 <TextView
                     android:id="@+id/tv_jz_date"
-                    android:layout_width="wrap_content"
+                    android:layout_width="@dimen/dp_120"
                     android:layout_height="wrap_content"
                     android:layout_marginLeft="@dimen/dp_20"
-                    android:layout_weight="1"
                     tools:text="04-09" />
 
                 <TextView
                     android:id="@+id/tv_jz_v1"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginLeft="@dimen/dp_25"
                     android:layout_weight="1"
+                    android:layout_marginLeft="@dimen/dp_10"
                     tools:text="1.1610" />
 
                 <TextView
@@ -76,6 +75,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:gravity="center"
+                    android:textSize="@dimen/dp_12"
                     tools:text="-0.6%" />
             </LinearLayout>
 
@@ -90,10 +91,9 @@
 
                 <TextView
                     android:id="@+id/tv_gz_date"
-                    android:layout_width="wrap_content"
+                    android:layout_width="@dimen/dp_120"
                     android:layout_height="wrap_content"
                     android:layout_marginLeft="@dimen/dp_20"
-                    android:layout_weight="1"
                     tools:text="04-12 11:04" />
 
                 <TextView
@@ -101,6 +101,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:layout_marginLeft="@dimen/dp_10"
                     tools:text="1.1510" />
 
                 <TextView
@@ -108,6 +109,9 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:gravity="center"
+                    android:textStyle="bold"
+                    android:textSize="@dimen/dp_14"
                     tools:text="-2%" />
             </LinearLayout>
             <LinearLayout

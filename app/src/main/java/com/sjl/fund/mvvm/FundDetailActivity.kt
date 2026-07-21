@@ -189,12 +189,12 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
             updateAssetAllocation(slices)
         })
 
-        viewModel.realTimeValue.observe(this, Observer { (gsz, gszzl, gztime) ->
-            // 更新顶部收益显示
+        viewModel.realTimeValue.observe(this, Observer { (_, gszzl, gztime) ->
             val changeValue = gszzl.replace("%", "").toFloatOrNull() ?: 0f
             tv_change_percent.text = if (changeValue >= 0) "+$gszzl%" else "$gszzl%"
             val color = if (changeValue >= 0) Color.parseColor("#FFE54545") else Color.parseColor("#FF2EAC69")
             tv_change_percent.setTextColor(color)
+            tv_update_time.text = gztime
         })
     }
 

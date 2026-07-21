@@ -62,12 +62,12 @@ class FundDetailViewModel : BaseViewModel() {
         launchUI({
             try {
                 withContext(Dispatchers.IO) {
-                    loadHistoryNetValue(fundCode)
+                    loadHistoryNetValue(fundCode)       // 头部 + 历史净值表 (lsjz)
+                    loadRealTimeValue(fundCode)         // 涨跌幅 (fundgz)
                     loadPerformanceTrendAndPerformance(fundCode)
                     loadHoldings(fundCode)
                     loadBondHoldings(fundCode)
                     loadAssetAllocation(fundCode)
-                    loadRealTimeValue(fundCode)
                 }
             } catch (e: Exception) {
                 LogUtils.e("加载基金详情失败", e)
@@ -79,23 +79,23 @@ class FundDetailViewModel : BaseViewModel() {
     }
 
     /**
-     * 加载当前净值与当日涨跌幅
-     * 注意：原先使用 getFundInfo（fundgz 接口），其 dwjz 常滞后一天、gsz 为盘中估值，
-     * 与支付宝的单位净值对不上。改用官方历史净值接口 lsjz 的最新一条（已验证与支付宝一致）。
+     * 加载盘中涨跌幅（来自 getFundInfo / fundgz 接口）
      */
     private suspend fun loadRealTimeValue(fundCode: String) {
         try {
-            val response = RetrofitClient.api.getFundHistoryNetValue(
-                fundCode = fundCode, pageSize = 1
-            ).await()
-            val list = parseHistoryNetValueFromJson(response.string())
-            if (list.isNotEmpty()) {
-                val latest = list.first()
-                // gsz 字段复用为最新确认净值，gszzl 为当日涨跌幅，gztime 复用为净值日期
-                realTimeValue.postValue(Triple(latest.DWJZ, latest.JZZZL, latest.FSRQ))
+            val response = RetrofitClient.api.getFundInfo(fundCode, System.currentTimeMillis()).await()
+            val jsonStr = response.string()
+
+            val pattern = Pattern.compile("jsonpgz\\((\\{.*?\\})\\);")
+            val matcher = pattern.matcher(jsonStr)
+            if (matcher.find()) {
+                val jsonObject = JSONObject(matcher.group(1))
+                val gszzl = jsonObject.optString("gszzl", "--")
+                val gztime = jsonObject.optString("gztime", "--")
+                realTimeValue.postValue(Triple("", gszzl, gztime))
             }
         } catch (e: Exception) {
-            LogUtils.e("获取实时净值失败", e)
+            LogUtils.e("获取实时估值失败", e)
         }
     }
 

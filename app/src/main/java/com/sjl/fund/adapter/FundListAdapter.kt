@@ -36,6 +36,7 @@ class FundListAdapter(data: List<FundInfo>?) : BaseQuickAdapter<FundInfo, BaseVi
                     .setText(R.id.tv_code, fundInfo.fundcode)
                     .setText(R.id.tv_jz_date, fundInfo.jzrq)
                     .setText(R.id.tv_jz_v1, fundInfo.dwjz)
+                    .setText(R.id.tv_jz_v2, fundInfo.jzzzl)
 
                     .setText(R.id.tv_gz_date, fundInfo.gztime)
                     .setText(R.id.tv_gz_v1, fundInfo.gsz)
@@ -52,11 +53,17 @@ class FundListAdapter(data: List<FundInfo>?) : BaseQuickAdapter<FundInfo, BaseVi
         //https://github.com/CymChad/BaseRecyclerViewAdapterHelper/issues/3305#issuecomment-712553987,下面会导致列表第一项不会在onitemchildclick里面响应，
         // 需要在activity里 adapter.addChildClickViewIds或在adapter的构造addChildClickViewIds()添加点击事件
 //        addChildClickViewIds(R.id.tv_name)
-        if (!TextUtils.isEmpty(fundInfo.gszzl)&&fundInfo.gszzl.toDouble() > 0) {
+        // 上次净值涨跌幅红绿色
+        if (!TextUtils.isEmpty(fundInfo.jzzzl) && fundInfo.jzzzl.startsWith("-")) {
+            baseViewHolder.setTextColor(R.id.tv_jz_v2, Color.GREEN)
+        } else if (!TextUtils.isEmpty(fundInfo.jzzzl)) {
+            baseViewHolder.setTextColor(R.id.tv_jz_v2, Color.RED)
+        }
+        // 盘中估值涨跌幅红绿色
+        if (!TextUtils.isEmpty(fundInfo.gszzl) && fundInfo.gszzl.toDouble() > 0) {
             baseViewHolder.setTextColor(R.id.tv_gz_v2, Color.RED)
         } else {
             baseViewHolder.setTextColor(R.id.tv_gz_v2, Color.GREEN)
-
         }
 
     }

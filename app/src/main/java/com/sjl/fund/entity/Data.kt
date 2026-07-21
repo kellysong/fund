@@ -19,13 +19,15 @@ import androidx.room.PrimaryKey
  */
 @Entity(tableName = "fund_info")
 data class FundInfo(
+    //上次净值	日期 jzrq | 确认净值 dwjz | 涨跌幅 jzzzl  --getFundHistoryNetValue (lsjz)
+    //今日估值	时间 gztime | 盘中净值 gsz | 涨跌幅 gszzl --getFundInfo (fundgz)
         @PrimaryKey
         val fundcode: String,
-        var dwjz: String,   // 单位净值（由历史净值接口 lsjz 修正，保证准确）
-        var gsz: String,    // 估值（同用 lsjz 最新确认净值，避免 fundgz 估值漂移）
-        var gszzl: String,  // 当日涨跌幅（由 lsjz 的 JZZZL 修正）
+        var dwjz: String,   // 最新确认单位净值（来自 lsjz 接口）
+        var gsz: String,    // 盘中实时估值（来自 fundgz 接口，交易时段有效）
+        var gszzl: String,  // 盘中估值涨跌幅（来自 fundgz 接口）
         val gztime: String,
-        var jzrq: String,   // 净值日期（由 lsjz 的 FSRQ 修正）
+        var jzrq: String,   // 确认净值日期（来自 lsjz 接口）
         val name: String,
         var sortId: Int,
         /**
@@ -49,6 +51,7 @@ data class FundInfo(
 ){
     @Ignore  // 将忽略的字段放在类体内
     var operateType: Int = 0
+    var jzzzl: String = ""  // 确认净值的日涨跌幅（来自 lsjz 接口）
 }
 
 /**

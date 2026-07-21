@@ -97,6 +97,8 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
         LogUtils.i("开始加载数据")
 
         launchUI({
+            val listFundInfos = listFundInfos()
+            LogUtils.i("基金列表：${listFundInfos?.size}")
             val listFundCodeList = listFundInfosByType(currentFundType)
             val name = Thread.currentThread().name
             LogUtils.i(name)
@@ -169,9 +171,9 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
     }
 
     /**
-     * 用官方历史净值接口 lsjz 的最新一条覆盖 fundgz 返回的净值字段。
+     * 用官方历史净值接口 lsjz 的最新一条修正 FundInfo 的确认净值字段。
      * fundgz 的 dwjz 常滞后一天、gsz 为盘中估值，与支付宝单位净值对不上；
-     * lsjz 已验证与支付宝一致（返回 Data.LSJZList[0]：FSRQ/DWJZ/JZZZL）。
+     * lsjz 已验证与支付宝一致。不再覆盖 gsz/gszzl（盘中估值保留 fundgz 原始值）。
      */
     private suspend fun correctNetValueByLsjz(fundCode: String, fundInfo: FundInfo) {
         try {
@@ -187,10 +189,10 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
             val jzzzl = obj.optString("JZZZL", "")
             val fsrq = obj.optString("FSRQ", "")
             if (dwjz.isNotEmpty()) {
-                fundInfo.dwjz = dwjz
-                fundInfo.gsz = dwjz
-                fundInfo.gszzl = jzzzl
-                fundInfo.jzrq = fsrq
+                fundInfo.dwjz = dwjz     // 确认净值
+                fundInfo.jzrq = fsrq     // 确认净值日期
+                fundInfo.jzzzl = jzzzl   // 确认净值日涨跌幅
+                // gsz/gszzl/gztime 保持 fundgz 盘中估值，不再覆盖
             }
         } catch (e: Exception) {
             LogUtils.e("s:$fundCode,lsjz修正净值失败，沿用fundgz数据", e)
