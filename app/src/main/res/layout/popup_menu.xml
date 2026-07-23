@@ -53,4 +53,22 @@
         android:textSize="14sp"
         android:background="?android:attr/selectableItemBackground" />
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:layout_marginStart="16dp"
+        android:background="#EEEEEE" />
+
+    <TextView
+        android:id="@+id/tv_data_backup"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:gravity="center_vertical"
+        android:paddingStart="16dp"
+        android:paddingEnd="24dp"
+        android:text="数据备份"
+        android:textColor="#333333"
+        android:textSize="14sp"
+        android:background="?android:attr/selectableItemBackground" />
+
 </LinearLayout>

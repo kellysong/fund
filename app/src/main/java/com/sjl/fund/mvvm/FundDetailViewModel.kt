@@ -41,6 +41,7 @@ class FundDetailViewModel : BaseViewModel() {
     val assetAllocation = MutableLiveData<List<AssetAllocationSlice>>()
     val netValueInfo = MutableLiveData<Triple<String, String, String>>() // 单位净值/累计净值/日期
     val realTimeValue = MutableLiveData<Triple<String, String, String>>() // 估值/涨跌幅/估值时间
+    val fundBaseInfo = MutableLiveData<Triple<String, String, String>>() // 类型/公司/经理
     val error = MutableLiveData<Throwable>()
     val loading = MutableLiveData<Boolean>()
 
@@ -62,6 +63,7 @@ class FundDetailViewModel : BaseViewModel() {
         launchUI({
             try {
                 withContext(Dispatchers.IO) {
+                    loadFundBaseInfo(fundCode)          // 类型/公司/经理
                     loadHistoryNetValue(fundCode)       // 头部 + 历史净值表 (lsjz)
                     loadRealTimeValue(fundCode)         // 涨跌幅 (fundgz)
                     loadPerformanceTrendAndPerformance(fundCode)
@@ -103,6 +105,23 @@ class FundDetailViewModel : BaseViewModel() {
             }
         } catch (e: Exception) {
             LogUtils.e("获取盘中估值失败", e)
+        }
+    }
+
+    // ---- 基金基本信息 ----
+    private suspend fun loadFundBaseInfo(fundCode: String) {
+        try {
+            val resp = RetrofitClient.api.getFundNameByCode(key = fundCode).await()
+            val root = JSONObject(resp.string())
+            val datas = root.optJSONArray("Datas") ?: return
+            if (datas.length() == 0) return
+            val info = datas.getJSONObject(0).optJSONObject("FundBaseInfo") ?: return
+            val type = info.optString("FTYPE", "")
+            val company = info.optString("JJGS", "")
+            val manager = info.optString("JJJL", "")
+            fundBaseInfo.postValue(Triple(type, company, manager))
+        } catch (e: Exception) {
+            LogUtils.e("获取基金基本信息失败", e)
         }
     }
 

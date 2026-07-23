@@ -160,7 +160,7 @@ class SectorFlowActivity : BaseViewModelActivity<SectorFlowViewModel>() {
 
         chart.notifyDataSetChanged()
         chart.invalidate()
-        chart.animateY(600) // 柱状图动画
+        chart.post { chart.animateY(300) }
     }
 
     override fun startObserve() {

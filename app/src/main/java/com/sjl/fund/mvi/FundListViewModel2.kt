@@ -54,7 +54,8 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
                         it.holdFlag,
                         it.fundMoney,
                         it.fundType,
-                        it.operateType
+                        it.operateType,
+                        it.name
                     )
                     is FundListIntent.LoadIndexData -> loadIndexData()
                     is FundListIntent.SwitchTab -> {
@@ -138,30 +139,27 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
         fundMoney: Double,
         fundType: Int,
         createTime: Long = 0L,
-        operateType: Int
+        operateType: Int,
+        name: String = ""
     ) {
         ApiRepository.getFundInfoV2(fundCode)
         .map {
             // 新浪返回为 GBK 编码，按 GBK 解码以获取正确的中文基金名称（数字字段为 ASCII，不受影响）
             val json = String(it.source().readByteArray(), charset("GBK"))
             LogUtils.i("string:${json}")
-                // lsjz 接口不含基金名称，名称取自数据库已有记录
-                val existName = DaoRepository.getFundInfo(fundCode)?.name ?: ""
+                // 基金名称：添加时优先用搜索返回的名称，否则取数据库已有记录
+                val fundName = name.ifEmpty { DaoRepository.getFundInfo(fundCode)?.name ?: "" }
                 val fundInfo = FundInfo(
                     fundcode = fundCode,
-                    name = existName,
+                    name = fundName,
                     dwjz = "", gsz = "", gszzl = "", gztime = "", jzrq = "",
                     sortId = 0, holdFlag = 1, holdMoney = 0.0, fundType = 0
                 )
                 // 用新浪盘中估值填充
                 // 盘中估值（新浪）
                 ApiRepository.applySinaFundInfo(json, fundInfo)
-                // 确认净值 + 昨日涨跌幅（东方财富 lsjz，对应“上次净值”区）
+                // 确认净值 + 昨日涨跌幅（东方财富 lsjz，对应"上次净值"区）
                 correctNetValueByLsjz(fundCode, fundInfo)
-                // 海外/QDII 基金新浪无数据，名称兜底用东方财富搜索接口
-                if (fundInfo.name.isEmpty()) {
-                    ApiRepository.getFundNameByCode(fundCode)?.let { fundInfo.name = it }
-                }
                 fundInfo
             }.catch { e ->
                 // 异常处理
@@ -249,13 +247,13 @@ class FundListViewModel2 : BaseViewModel(), FundDataSource {
     }
 
 
-    fun saveFundCode(fundCode: String, holdFlag: Int, fundMoney: Double, fundType: Int, operateType: Int) {
+    fun saveFundCode(fundCode: String, holdFlag: Int, fundMoney: Double, fundType: Int, operateType: Int, name: String = "") {
         if (TextUtils.isEmpty(fundCode)) {
             return
         }
         launchUI({
             val newSortId = getMaxSortId()
-            requestServer(fundCode, newSortId, holdFlag, fundMoney, fundType, System.currentTimeMillis(),operateType)
+            requestServer(fundCode, newSortId, holdFlag, fundMoney, fundType, System.currentTimeMillis(), operateType, name)
         })
     }
 
@@ -288,7 +286,7 @@ sealed class FundListIntent {
     data class SortData(val data: MutableList<FundInfo>) : FundListIntent()
     data class DeleteFund(val fundCode: String) : FundListIntent()
     data class Update(val fundInfo: FundInfo) : FundListIntent()
-    data class SaveFundCode(val fundCode: String, val holdFlag: Int, val fundMoney: Double, val fundType: Int = 0, val operateType: Int = 0) :
+    data class SaveFundCode(val fundCode: String, val holdFlag: Int, val fundMoney: Double, val fundType: Int = 0, val operateType: Int = 0, val name: String = "") :
         FundListIntent()
 }
 

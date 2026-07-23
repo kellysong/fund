@@ -76,8 +76,9 @@ object ApiRepository {
             // 确认净值与昨日涨跌幅(dwjz/jzrq/jzzzl)由 getFundHistoryNetValue(lsjz) 提供，不要在此覆盖。
             fundInfo.gsz = gsz
             fundInfo.gszzl = gszzl
-            // 更新时间显示为“日期 + 时间”
-            fundInfo.gztime = if (gzdate.isNotEmpty()) "$gzdate $gztime" else gztime
+            // 更新时间显示为“日期 + 时间”（去掉秒）
+            val timeNoSec = if (gztime.length > 5) gztime.substring(0, gztime.lastIndexOf(":")) else gztime
+            fundInfo.gztime = if (gzdate.isNotEmpty()) "$gzdate $timeNoSec" else timeNoSec
             true
         } catch (e: Exception) {
             false

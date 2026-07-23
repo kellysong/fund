@@ -32,11 +32,12 @@ class NetValueHistoryAdapter : BaseQuickAdapter<FundHistoryNetValue, BaseViewHol
         val changeValue = changeStr.replace("%", "").replace("--", "0").trim().toFloatOrNull() ?: 0f
         
         // 格式化显示文本
+        val changeWithPercent = if (changeStr.contains("%")) changeStr else "$changeStr%"
         val displayText = when {
             TextUtils.isEmpty(changeStr) || changeStr == "--" -> "--"
-            changeStr.startsWith("-") -> changeStr  // 跌，保持原样
+            changeStr.startsWith("-") -> changeWithPercent
             changeValue == 0f -> "0.00%"
-            else -> "+$changeStr"  // 涨，添加+号
+            else -> "+$changeWithPercent"
         }
         
         changeTextView.text = displayText

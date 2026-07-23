@@ -28,12 +28,19 @@ import com.sjl.fund.adapter.IndexListAdapter
 import com.sjl.fund.db.DaoRepository
 import com.sjl.fund.entity.FundInfo
 import com.sjl.fund.mvvm.FundDetailActivity
+import com.sjl.fund.net.ApiRepository
+import com.sjl.fund.net.RetrofitClient
 import com.sjl.fund.util.DateUtils
 import com.sjl.fund.util.MoneyUtils
 import com.sjl.fund.util.ExcelImportHelper
 import kotlinx.android.synthetic.main.fund_list_activity.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import retrofit2.await
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -66,6 +73,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
     private var currentTabIndex = 0
 
     override fun initView() {
+        swipeRefreshLayout.setColorSchemeColors(resources.getColor(R.color.colorPrimary))
         recycleView.layoutManager = LinearLayoutManager(this)
         createAdapter = FundListAdapter(null)
 
@@ -359,6 +367,11 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             exportTemplate()
         }
 
+        popupView.findViewById<TextView>(R.id.tv_data_backup).setOnClickListener {
+            popupWindow.dismiss()
+            backupFunds()
+        }
+
         popupWindow.setBackgroundDrawable(getDrawable(R.drawable.bg_popup_menu))
         popupWindow.elevation = 8f
         popupWindow.showAsDropDown(anchor, 0, 0)
@@ -376,6 +389,23 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             intent2.type = "*/*"
             intent2.addCategory(Intent.CATEGORY_OPENABLE)
             startActivityForResult(intent2, REQUEST_CODE_IMPORT)
+        }
+    }
+
+    /** 数据备份 */
+    private fun backupFunds() {
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.IO) {
+                    val path = ExcelImportHelper.backupFunds(this@FundListActivity2)
+                    withContext(Dispatchers.Main) {
+                        showAlertDialog("备份成功", "文件已保存到：\n$path")
+                    }
+                }
+            } catch (e: Exception) {
+                LogUtils.e("数据备份失败", e)
+                showAlertDialog("备份失败", e.message ?: "未知错误")
+            }
         }
     }
 
@@ -607,7 +637,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         }
     }
 
-    /** 显示添加对话框（自定义美化版） */
+    /** 显示添加对话框（实时搜索） */
     private fun showAddDialog() {
         val view = LayoutInflater.from(this).inflate(R.layout.dialog_add_fund, null)
         // 包裹白色圆角背景
@@ -619,11 +649,22 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             ))
         }
         val etFundCode = wrapper.findViewById<EditText>(R.id.et_fund_code)
+        val layoutResult = wrapper.findViewById<LinearLayout>(R.id.layout_search_result)
+        val tvSearchName = wrapper.findViewById<TextView>(R.id.tv_search_name)
+        val tvSearchCode = wrapper.findViewById<TextView>(R.id.tv_search_code)
+        val tvSearchType = wrapper.findViewById<TextView>(R.id.tv_search_type)
+        val tvSearchCompany = wrapper.findViewById<TextView>(R.id.tv_search_company)
+        val layoutNavInfo = wrapper.findViewById<LinearLayout>(R.id.layout_nav_info)
+        val tvSearchNav = wrapper.findViewById<TextView>(R.id.tv_search_nav)
+        val tvSearchNavDate = wrapper.findViewById<TextView>(R.id.tv_search_nav_date)
+        val tvSearchManager = wrapper.findViewById<TextView>(R.id.tv_search_manager)
         val cbHold = wrapper.findViewById<CheckBox>(R.id.cb_hold)
         val etFundMoney = wrapper.findViewById<EditText>(R.id.et_fund_money)
         val rgFundType = wrapper.findViewById<RadioGroup>(R.id.rg_fund_type)
         val tvCancel = wrapper.findViewById<TextView>(R.id.tv_cancel)
         val tvConfirm = wrapper.findViewById<TextView>(R.id.tv_confirm)
+        var searchedCode = ""
+        var searchedName = ""
 
         // 设置初始Tab
         if (currentTabIndex == 0) {
@@ -635,6 +676,27 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         cbHold.setOnCheckedChangeListener { _, isChecked ->
             etFundMoney.visibility = if (isChecked) View.VISIBLE else View.GONE
         }
+
+        // 实时搜索：输入6位代码后触发
+        etFundCode.addTextChangedListener(object : TextWatcher {
+            private var lastSearch = ""
+            override fun afterTextChanged(s: Editable?) {
+                val code = s?.toString()?.trim() ?: ""
+                if (code.length == 6 && code != lastSearch) {
+                    lastSearch = code
+                    searchFund(code, tvSearchName, tvSearchCode, tvSearchType, tvSearchCompany,
+                        layoutResult, layoutNavInfo, tvSearchNav, tvSearchNavDate, tvSearchManager) { c, n ->
+                        searchedCode = c; searchedName = n
+                    }
+                } else if (code.length != 6) {
+                    lastSearch = ""
+                    layoutResult.visibility = View.GONE
+                    searchedCode = ""; searchedName = ""
+                }
+            }
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+        })
 
         val dialog = Dialog(this).apply {
             setContentView(wrapper)
@@ -655,7 +717,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             val holdFlag = if (isChecked) 1 else 0
             val holdMoney = if (fundMoney.isNotEmpty()) fundMoney.toDouble() else 0.0
             val fundType = if (rgFundType.checkedRadioButtonId == R.id.rb_self_select) 0 else 1
-            viewModel.dispatch(FundListIntent.SaveFundCode(fundCode, holdFlag, holdMoney, fundType,1))
+            viewModel.dispatch(FundListIntent.SaveFundCode(fundCode, holdFlag, holdMoney, fundType, 1, searchedName))
             dialog.dismiss()
         }
 
@@ -664,6 +726,52 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             (resources.displayMetrics.widthPixels * 0.88).toInt(),
             WindowManager.LayoutParams.WRAP_CONTENT
         )
+    }
+
+    private fun searchFund(
+        code: String,
+        tvName: TextView, tvCode: TextView, tvType: TextView, tvCompany: TextView,
+        layout: LinearLayout, layoutNav: LinearLayout,
+        tvNav: TextView, tvNavDate: TextView, tvManager: TextView,
+        onResult: (code: String, name: String) -> Unit
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val resp = RetrofitClient.api.getFundNameByCode(key = code).await()
+                val jsonStr = resp.string()
+                val root = JSONObject(jsonStr)
+                val datas = root.optJSONArray("Datas") ?: return@launch
+                if (datas.length() == 0) return@launch
+                val item = datas.getJSONObject(0)
+                val name = item.optString("NAME", "")
+                val info = item.optJSONObject("FundBaseInfo")
+                withContext(Dispatchers.Main) {
+                    tvName.text = name
+                    tvCode.text = code
+                    if (info != null) {
+                        tvType.text = info.optString("FTYPE", "")
+                        tvCompany.text = info.optString("JJGS", "")
+                        val nav = info.optDouble("DWJZ", 0.0)
+                        val navDate = info.optString("FSRQ", "")
+                        val manager = info.optString("JJJL", "")
+                        if (nav > 0) {
+                            tvNav.text = nav.toString()
+                            tvNavDate.text = navDate
+                            layoutNav.visibility = View.VISIBLE
+                        } else {
+                            layoutNav.visibility = View.GONE
+                        }
+                        tvManager.text = manager
+                    }
+                    layout.visibility = View.VISIBLE
+                    onResult(code, name)
+                }
+            } catch (_: Exception) {
+                withContext(Dispatchers.Main) {
+                    layout.visibility = View.GONE
+                }
+            }
+        }
     }
 
     /** 显示编辑对话框（自定义美化版） */

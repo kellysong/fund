@@ -74,41 +74,55 @@
             android:text="地域" />
     </com.google.android.material.tabs.TabLayout>
 
-    <!-- 板块主力资金流向图 -->
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="#FFFFFF"
-        android:paddingTop="8dp"
-        android:paddingBottom="8dp">
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
-        <TextView
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingStart="12dp"
-            android:paddingBottom="4dp"
-            android:text="主力净流入 Top15 (亿元)"
-            android:textColor="#333333"
-            android:textSize="13sp"
-            android:textStyle="bold" />
+            android:orientation="vertical">
 
-        <com.github.mikephil.charting.charts.HorizontalBarChart
-            android:id="@+id/chart"
-            android:layout_width="match_parent"
-            android:layout_height="400dp" />
-    </LinearLayout>
+            <!-- 板块主力资金流向图 -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="#FFFFFF"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp">
 
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="8dp"
-        android:background="#F5F5F5" />
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="12dp"
+                    android:paddingBottom="4dp"
+                    android:text="主力净流入 Top15 (亿元)"
+                    android:textColor="#333333"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_sector"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:overScrollMode="never"
-        android:background="#FFFFFF" />
+                <com.github.mikephil.charting.charts.HorizontalBarChart
+                    android:id="@+id/chart"
+                    android:layout_width="match_parent"
+                    android:layout_height="400dp" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:background="#F5F5F5" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_sector"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:overScrollMode="never"
+                android:nestedScrollingEnabled="false"
+                android:background="#FFFFFF" />
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 
 </LinearLayout>

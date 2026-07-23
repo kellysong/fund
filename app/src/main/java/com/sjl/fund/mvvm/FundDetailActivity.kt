@@ -161,6 +161,12 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
             tv_value_date.text = date
         })
 
+        viewModel.fundBaseInfo.observe(this, Observer { (type, company, manager) ->
+            tv_fund_type.text = type.ifEmpty { "" }
+            tv_fund_company.text = if (company.isNotEmpty()) " - $company" else ""
+            tv_fund_manager.text = if (manager.isNotEmpty()) " - $manager" else ""
+        })
+
         viewModel.historyNetValues.observe(this, Observer { list ->
             historyAdapter?.setNewInstance(list.toMutableList())
         })
