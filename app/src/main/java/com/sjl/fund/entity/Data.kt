@@ -143,7 +143,7 @@ data class IndexData(
  * @property code 板块代码 (f12)
  * @property name 板块名称 (f14)
  * @property changePercent 涨跌幅(%) (f3)
- * @property mainNetInflow 主力净流入(元) (f62)
+ * @property mainNetInflow 主力净流入(元) (f164)
  * @property mainNetInflowPercent 主力净占比(%) (f184)
  * @property extraLargeNetInflow 超大单净流入(元) (f66)
  * @property largeNetInflow 大单净流入(元) (f72)

@@ -29,9 +29,9 @@ object SectorFlowRepository {
      * 加载板块主力资金流向
      * @param fs 板块过滤串
      */
-    suspend fun loadSectorFlow(fs: String): List<SectorFlowData> {
+    suspend fun loadSectorFlow(fs: String, po: Int = 1): List<SectorFlowData> {
         return withContext(Dispatchers.IO) {
-            val response = RetrofitClient.api.getSectorCapitalFlow(fs = fs).await()
+            val response = RetrofitClient.api.getSectorCapitalFlow(fs = fs, po = po).await()
             val raw = response.string()
             android.util.Log.d("SectorFlow", "raw len=${raw.length}")
             // 该接口返回 JSONP 格式：jsonpCallback({...})，需剥离外壳再解析

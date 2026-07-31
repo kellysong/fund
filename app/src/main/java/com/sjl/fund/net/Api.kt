@@ -158,7 +158,7 @@ interface Api {
      * 获取板块主力资金流向（行业/概念/地域）
      * https://push2.eastmoney.com/api/qt/clist/get?fs=m:90+t:2
      * fs 板块类型: 行业=m:90+t:2, 概念=m:90+t:3, 地域=m:90+t:1
-     * fields: f12=代码, f14=名称, f3=涨跌幅, f62=主力净流入, f184=主力净占比,
+     * fields: f12=代码, f14=名称, f3=涨跌幅, f164=主力净流入, f184=主力净占比,
      *         f66=超大单, f72=大单, f78=中单, f84=小单
      */
     @GET("http://push2.eastmoney.com/api/qt/clist/get")
@@ -167,7 +167,7 @@ interface Api {
         @Query("cb") cb: String = "randomCallback",
         @Query("pn") pn: Int = 1,
         @Query("pz") pz: Int = 200,
-        @Query("po") po: Int = 1,
+        @Query("po") po: Int, //排序方向：1 = 降序（净流入从大到小），0 = 升序
         @Query("np") np: Int = 1,
         @Query("fltt") fltt: Int = 2,
         @Query("invt") invt: Int = 2,

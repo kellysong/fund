@@ -35,8 +35,9 @@ class SectorFlowActivity : BaseViewModelActivity<SectorFlowViewModel>() {
     override fun initView() {
         // 返回
         iv_back.setOnClickListener { finish() }
-        // 刷新
+        // 刷新（切换升降序）
         iv_refresh.setOnClickListener {
+            viewModel.isAscending = !viewModel.isAscending
             viewModel.dispatch(SectorFlowIntent.RefreshData)
         }
 
@@ -102,16 +103,21 @@ class SectorFlowActivity : BaseViewModelActivity<SectorFlowViewModel>() {
     }
 
     /**
-     * 更新主力净流入柱状图（取 Top15，净流入最大在最上方）
+     * 主力资金流向柱状图（降序：取前15流入，升序：取后15流出）
      */
     private fun updateChart(list: List<SectorFlowData>) {
         chart.clear()
         chart.fitScreen()
-        val top = list.take(15).reversed() // 反转使最大在最上方
+        val top = if (!viewModel.isAscending) {
+            list.take(15).reversed()       // 降序：流入Top15，反转使最大在上
+        } else {
+            list.reversed().take(15).reversed()        // 升序：反转后取前15 = 流出Top15
+        }
         if (top.isEmpty()) return
 
         val entries = ArrayList<BarEntry>()
         val colors = ArrayList<Int>()
+        val labels = ArrayList<String>()
         val redColor = Color.parseColor("#E54545")
         val greenColor = Color.parseColor("#2EAC69")
         var maxAbs = 0f
@@ -120,12 +126,13 @@ class SectorFlowActivity : BaseViewModelActivity<SectorFlowViewModel>() {
             val yi = (item.mainNetInflow / 1e8).toFloat()
             entries.add(BarEntry(i.toFloat(), yi))
             colors.add(if (yi >= 0) redColor else greenColor)
+            labels.add(item.name)
             maxAbs = maxOf(maxAbs, kotlin.math.abs(yi))
         }
 
         val dataSet = BarDataSet(entries, "")
         dataSet.colors = colors
-        dataSet.valueTextSize = 12f
+        dataSet.valueTextSize = 11f
         dataSet.valueTextColor = Color.parseColor("#333333")
         dataSet.setDrawValues(true)
         dataSet.valueFormatter = object : ValueFormatter() {
@@ -138,25 +145,19 @@ class SectorFlowActivity : BaseViewModelActivity<SectorFlowViewModel>() {
         data.barWidth = 0.7f
         chart.data = data
 
-        // 显式设 Y 轴范围，防止数值标签被裁掉
-        val margin = maxAbs * 0.25f
+        val margin = maxAbs * 0.3f
         val minVal = entries.minOf { it.y }
-        chart.axisLeft.axisMinimum = (if (minVal < 0) minVal - margin else -margin)
-        chart.axisLeft.axisMaximum = maxAbs + margin
+        chart.axisLeft.axisMinimum = if (minVal < 0) minVal - margin else -margin
+        chart.axisLeft.axisMaximum = maxOf(0f, entries.maxOf { it.y }) + margin
 
-        // X 轴显示板块名称，长名称只取前6字
         chart.xAxis.valueFormatter = object : ValueFormatter() {
             override fun getFormattedValue(value: Float): String {
                 val idx = value.toInt()
-                if (idx in top.indices) {
-                    val n = top[idx].name
-                    return if (n.length > 6) n.substring(0, 6) + ".." else n
-                }
-                return ""
+                return if (idx in labels.indices) labels[idx].let { if (it.length > 5) it.substring(0, 5) else it } else ""
             }
         }
         chart.xAxis.axisMinimum = -0.5f
-        chart.xAxis.axisMaximum = top.size - 0.5f
+        chart.xAxis.axisMaximum = 14.5f
 
         chart.notifyDataSetChanged()
         chart.invalidate()
@@ -168,7 +169,12 @@ class SectorFlowActivity : BaseViewModelActivity<SectorFlowViewModel>() {
             viewModel.viewState.collect { state ->
                 when (state) {
                     is SectorFlowUiState.LoadSuccess -> {
-                        sectorAdapter?.setNewInstance(state.data.toMutableList())
+                        val top = if (!viewModel.isAscending) {
+                            state.data
+                        } else {
+                            state.data.reversed()
+                        }
+                        sectorAdapter?.setNewInstance(top.toMutableList())
                         updateChart(state.data)
                     }
                     is SectorFlowUiState.LoadError -> {

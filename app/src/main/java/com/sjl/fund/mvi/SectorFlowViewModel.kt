@@ -23,6 +23,8 @@ class SectorFlowViewModel : BaseViewModel() {
 
     // 当前选中的板块分类
     var currentBoard: String = "行业"
+    // 排序方向：false=降序(默认)，true=升序
+    var isAscending: Boolean = false
 
     init {
         viewModelScope.launch {
@@ -55,7 +57,8 @@ class SectorFlowViewModel : BaseViewModel() {
     private fun loadSectorData(board: String) {
         launchUI({
             val fs = SectorFlowRepository.BOARD_FS_MAP[board] ?: "m:90+t:2"
-            val list = SectorFlowRepository.loadSectorFlow(fs)
+            val po = if (isAscending) 0 else 1
+            val list = SectorFlowRepository.loadSectorFlow(fs, po)
             _viewState.emit(SectorFlowUiState.LoadSuccess(board, list))
         }, {}, { e ->
             LogUtils.e("加载板块资金流失败", e)

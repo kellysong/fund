@@ -40,8 +40,7 @@
             android:layout_alignParentEnd="true"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:scaleType="centerInside"
-            android:src="@drawable/ic_menu_refresh"
-            android:tint="@color/white" />
+            android:src="@drawable/ic_menu_sort"/>
     </RelativeLayout>
 
     <!-- 板块分类 Tab: 行业 / 概念 / 地域 -->
@@ -98,7 +97,7 @@
                     android:layout_height="wrap_content"
                     android:paddingStart="12dp"
                     android:paddingBottom="4dp"
-                    android:text="主力净流入 Top15 (亿元)"
+                    android:text="主力资金净流入 Top15 (亿元)"
                     android:textColor="#333333"
                     android:textSize="13sp"
                     android:textStyle="bold" />
