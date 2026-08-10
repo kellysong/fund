@@ -150,6 +150,21 @@ data class IndexData(
  * @property mediumNetInflow 中单净流入(元) (f78)
  * @property smallNetInflow 小单净流入(元) (f84)
  */
+data class UsIndexData(
+    val name: String,   // 指数名称
+    val price: String,  // 当前点位
+    val change: String, // 涨跌额
+    val changePercent: String // 涨跌幅%
+)
+
+data class UsSectorData(
+    val name: String,      // 板块名称
+    val leader: String,    // 领涨股
+    val changePercent: Double, // 板块涨跌幅%
+    val leaderChangePercent: Double, // 领涨股涨幅%
+    val stockCount: Int    // 成分股数量
+)
+
 data class SectorFlowData(
     val code: String,
     val name: String,

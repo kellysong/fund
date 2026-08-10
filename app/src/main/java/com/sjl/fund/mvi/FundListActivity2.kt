@@ -134,6 +134,12 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             val intent = Intent(this@FundListActivity2, SectorFlowActivity::class.java)
             startActivity(intent)
         }
+
+        // 标题栏左侧美股入口
+        iv_us_stock.setOnClickListener {
+            val intent = Intent(this@FundListActivity2, UsStockActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     /**
@@ -450,7 +456,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         }
 
         val titleText = TextView(this).apply {
-            text = "\u5bfc\u5165\u5230"
+            text = "导入到"
             textSize = 18f
             setTextColor(Color.parseColor("#333333"))
             setTypeface(null, android.graphics.Typeface.BOLD)
@@ -464,7 +470,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
 
         val rbSelf = RadioButton(this).apply {
             id = View.generateViewId()
-            text = "\u81ea\u9009"
+            text = "自选"
             textSize = 14f
             setTextColor(Color.parseColor("#333333"))
             setButtonDrawable(resources.getDrawable(R.drawable.selector_radio, theme))
@@ -475,7 +481,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
 
         val rbOther = RadioButton(this).apply {
             id = View.generateViewId()
-            text = "\u5176\u4ed6\u57fa\u91d1"
+            text = "其他基金"
             textSize = 14f
             setTextColor(Color.parseColor("#333333"))
             setButtonDrawable(resources.getDrawable(R.drawable.selector_radio, theme))
@@ -492,14 +498,14 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         }
 
         val cancelBtn = TextView(this).apply {
-            text = "\u53d6\u6d88"
+            text = "取消"
             textSize = 14f
             setTextColor(Color.parseColor("#999999"))
             setPadding(32, 16, 32, 16)
         }
 
         val confirmBtn = TextView(this).apply {
-            text = "\u5bfc\u5165"
+            text = "导入"
             textSize = 14f
             setTextColor(Color.WHITE)
             setBackgroundColor(Color.parseColor("#1677FF"))
@@ -587,7 +593,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
                 if (keyword.isEmpty()) {
                     rvResult.visibility = View.GONE
                     tvEmpty.visibility = View.VISIBLE
-                    tvEmpty.text = "\u8f93\u5165\u5173\u952e\u8bcd\u641c\u7d22\u5df2\u6dfb\u52a0\u7684\u57fa\u91d1"
+                    tvEmpty.text = "输入关键词搜索已添加的基金"
                 } else {
                     searchLocal(keyword, rvResult, tvEmpty)
                 }
@@ -881,7 +887,7 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         }
 
         val okBtn = TextView(this).apply {
-            text = "\u786e\u5b9a"
+            text = "确定"
             textSize = 14f
             setTextColor(Color.WHITE)
             setBackgroundColor(Color.parseColor("#1677FF"))

@@ -54,6 +54,13 @@
             android:screenOrientation="portrait"
             android:label="板块资金流向" />
 
+        <!-- 美股行情页面 -->
+        <activity
+            android:name="com.sjl.fund.mvi.UsStockActivity"
+            android:parentActivityName="com.sjl.fund.mvi.FundListActivity2"
+            android:screenOrientation="portrait"
+            android:label="美股" />
+
 
         <!--Android 7.0需要使用FileProvider生成content:// Uri来替代file:// Uri-->
         <provider

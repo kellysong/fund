@@ -77,7 +77,7 @@ android {
                     def tarFile = new File(outputFile.parent, fileName)
                     println("tarFile:"+tarFile.getAbsolutePath())
 
-                    def desFile= new File(project.rootDir.parentFile.getAbsolutePath() + "/apk/fund/${buildType}/${createTime}")
+                    def desFile= new File(project.rootDir.parentFile.getAbsolutePath() + "/apk/fund/${buildType}/${defaultConfig.versionName}")
                     if (!desFile.exists()){
                         desFile.mkdirs()
                     }

@@ -33,6 +33,7 @@ import java.util.regex.Pattern
 class FundDetailViewModel : BaseViewModel() {
 
     val historyNetValues = MutableLiveData<List<FundHistoryNetValue>>()
+    val cumulativeStats = MutableLiveData<Map<String, String>>() // 近3天/7天/15天/全部 累计涨跌幅
     // 完整走势数据（按时间戳排序），由Activity按需截取
     val allTrendPoints = MutableLiveData<List<FundTrendPoint>>()
     val performances = MutableLiveData<List<FundPerformance>>()
@@ -136,6 +137,8 @@ class FundDetailViewModel : BaseViewModel() {
 
             val list = parseHistoryNetValueFromJson(jsonStr)
             historyNetValues.postValue(list)
+            // 计算累计涨跌幅统计
+            calculateCumulativeStats(list)
             if (list.isNotEmpty()) {
                 val latest = list.first()
                 netValueInfo.postValue(Triple(latest.DWJZ, latest.LJJZ, latest.FSRQ))
@@ -169,6 +172,27 @@ class FundDetailViewModel : BaseViewModel() {
             LogUtils.e("解析历史净值JSON失败", e)
         }
         return list
+    }
+
+    /**
+     * 计算近3天/7天/15天/全部的累计涨跌幅（先格式化为两位小数再相加）
+     */
+    private fun calculateCumulativeStats(list: List<FundHistoryNetValue>) {
+        if (list.isEmpty()) return
+        val stats = mutableMapOf<String, String>()
+        val periods = mapOf("近5天" to 5, "近10天" to 10, "近15天" to 15, "全部" to list.size)
+
+        for ((label, days) in periods) {
+            val subset = list.take(days)
+            var sum = 0.0
+            for (item in subset) {
+                val v = item.JZZZL.replace("%", "").toDoubleOrNull() ?: 0.0
+                sum += String.format("%.2f", v).toDouble()
+            }
+            val sign = if (sum >= 0) "+" else ""
+            stats[label] = "$sign${String.format("%.2f", sum)}%"
+        }
+        cumulativeStats.postValue(stats)
     }
 
     // ---- 业绩走势 + 历史业绩 (同一个 pingzhongdata 接口) ----

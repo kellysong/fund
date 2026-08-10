@@ -67,6 +67,38 @@ interface Api {
     ): Call<ResponseBody>
 
     /**
+     * 获取美股指数实时行情（新浪）
+     * https://hq.sinajs.cn/list=int_dji,int_nasdaq,int_sp500
+     * 返回：var hq_str_int_dji="道琼斯,46247.29,299.97,0.65";
+     */
+    @GET
+    @Headers(
+        "Referer: https://finance.sina.com.cn/",
+        "User-Agent: Mozilla/5.0"
+    )
+    fun getUsIndex(@retrofit2.http.Url url: String): Call<ResponseBody>
+
+    /**
+     * 获取美股板块列表（新浪）
+     * https://us.finance.sina.com.cn/plate/list?sort=percent&asc=0&page=1&num=100&dpc=1&is_origin=factset
+     * 返回 JSONP：callback({...})，字段：category_cn=板块名, percent=涨跌幅, total_company=成分股数
+     */
+    @GET("https://us.finance.sina.com.cn/plate/list")
+    @Headers(
+        "Referer: https://finance.sina.com.cn/",
+        "User-Agent: Mozilla/5.0"
+    )
+    fun getUsPlateList(
+        @Query("sort") sort: String = "percent",
+        @Query("asc") asc: Int = 0,
+        @Query("page") page: Int = 1,
+        @Query("num") num: Int = 100,
+        @Query("dpc") dpc: Int = 1,
+        @Query("is_origin") isOrigin: String = "factset",
+        @Query("callback") callback: String = "cb"
+    ): Call<ResponseBody>
+
+    /**
      * 获取基金历史净值（东方财富官方 JSON 接口，稳定可用）
      * https://api.fund.eastmoney.com/f10/lsjz?fundCode=001970&pageIndex=1&pageSize=30
      * 返回 JSON：{"Data":{"LSJZList":[{"FSRQ","DWJZ","LJJZ","JZZZL",...}],"TotalCount":N},...}

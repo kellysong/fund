@@ -171,6 +171,17 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
             historyAdapter?.setNewInstance(list.toMutableList())
         })
 
+        viewModel.cumulativeStats.observe(this, Observer { stats ->
+            tv_stat_3d.text = stats["近5天"] ?: "--"
+            tv_stat_7d.text = stats["近10天"] ?: "--"
+            tv_stat_15d.text = stats["近15天"] ?: "--"
+            tv_stat_all.text = stats["全部"] ?: "--"
+            arrayOf(tv_stat_3d, tv_stat_7d, tv_stat_15d, tv_stat_all).forEach { tv ->
+                val v = tv.text.toString().replace("%", "").toDoubleOrNull() ?: 0.0
+                tv.setTextColor(if (v >= 0) Color.parseColor("#E54545") else Color.parseColor("#2EAC69"))
+            }
+        })
+
         viewModel.allTrendPoints.observe(this, Observer { list ->
             allTrendData = list
             updateChart()
