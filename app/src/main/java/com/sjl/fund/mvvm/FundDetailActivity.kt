@@ -15,8 +15,11 @@ import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.data.PieData
 import com.github.mikephil.charting.data.PieDataSet
 import com.github.mikephil.charting.data.PieEntry
+import com.github.mikephil.charting.formatter.IFillFormatter
 import com.github.mikephil.charting.formatter.ValueFormatter
 import com.github.mikephil.charting.highlight.Highlight
+import com.github.mikephil.charting.interfaces.datasets.ILineDataSet
+import com.github.mikephil.charting.interfaces.dataprovider.LineDataProvider
 import com.github.mikephil.charting.utils.MPPointF
 import com.google.android.material.tabs.TabLayout
 import com.sjl.core.mvvm.BaseViewModelActivity
@@ -30,6 +33,7 @@ import com.sjl.fund.entity.AssetAllocationSlice
 import com.sjl.fund.entity.FundBondHolding
 import com.sjl.fund.entity.FundHistoryNetValue
 import com.sjl.fund.entity.FundTrendPoint
+import com.sjl.fund.util.PageLoading
 import kotlinx.android.synthetic.main.fund_detail_activity.*
 
 /**
@@ -54,6 +58,9 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
     private var bondHoldingsAdapter: FundBondHoldingsAdapter? = null
     private var historyAdapter: NetValueHistoryAdapter? = null
     private var performanceAdapter: PerformanceAdapter? = null
+
+    // 页面加载 loading（统一封装，复用 PageLoading）
+    private val pageLoading by lazy { PageLoading(this) }
 
     // 当前选中时间段key
     private var currentPeriodKey = "1m"
@@ -148,7 +155,7 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
 
     override fun startObserve() {
         viewModel.loading.observe(this, Observer { isLoading ->
-            progress_bar.visibility = if (isLoading) View.VISIBLE else View.GONE
+            if (isLoading) pageLoading.show() else pageLoading.hide()
         })
 
         viewModel.error.observe(this, Observer { error ->
@@ -271,8 +278,8 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
             }
             axisRight.isEnabled = false
             legend.isEnabled = false
-            // 减少左右间距，避免浪费空间
-            setExtraOffsets(2f, 8f, 2f, 8f)
+            // 减少四周留白，底部仅保留必要间距，让填充区域更贴近日期标签
+            setExtraOffsets(2f, 8f, 2f, 2f)
         }
     }
 
@@ -314,6 +321,14 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
             setDrawFilled(true)
             this.fillColor = fillColor
             fillAlpha = 30
+            // 填充基准线使用数据空间的 y 轴最小值（绘图区底部），使浅蓝色从曲线一直铺到下方底部
+            // 注：getFillLinePosition 返回的是数据值（非像素），返回像素会被当作超大数据值导致填充到曲线上方
+            fillFormatter = object : IFillFormatter {
+                override fun getFillLinePosition(
+                    dataSet: ILineDataSet?,
+                    dataProvider: LineDataProvider?
+                ): Float = dataProvider?.yChartMin ?: 0f
+            }
             setDrawValues(false)
             // 点击高亮点样式
             highLightColor = Color.parseColor("#1677FF")
@@ -330,7 +345,7 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
         line_chart.animateX(400)
     }
 
-    // ---- 饼图（资产分布：股票/债券/现金/其它） ----
+    // ---- 饼图（资产分布：股票/债券/现金/其它，扇区外侧折线引导标签） ----
 
     private fun initPieChart() {
         pie_chart.apply {
@@ -340,14 +355,11 @@ class FundDetailActivity : BaseViewModelActivity<FundDetailViewModel>() {
             setUsePercentValues(false)
             setEntryLabelColor(Color.parseColor("#333333"))
             setEntryLabelTextSize(11f)
-            legend.isEnabled = true
-            legend.textSize = 11f
-            legend.textColor = Color.parseColor("#666666")
-            legend.verticalAlignment = com.github.mikephil.charting.components.Legend.LegendVerticalAlignment.BOTTOM
-            legend.horizontalAlignment = com.github.mikephil.charting.components.Legend.LegendHorizontalAlignment.CENTER
-            legend.orientation = com.github.mikephil.charting.components.Legend.LegendOrientation.HORIZONTAL
-            legend.setDrawInside(false)
-            setExtraOffsets(8f, 8f, 8f, 8f)
+            // 标签改为外侧折线引导显示（LeaderLinePieChart 绘制），不再用图例和扇区内文字，避免小占比显示不全
+            legend.isEnabled = false
+            setDrawEntryLabels(false)
+            // 左右预留更大间距，给引导线标签留出空间
+            setExtraOffsets(36f, 8f, 36f, 8f)
         }
     }
 

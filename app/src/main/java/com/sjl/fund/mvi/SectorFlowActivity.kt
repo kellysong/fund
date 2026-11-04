@@ -14,6 +14,7 @@ import com.sjl.core.mvvm.BaseViewModelActivity
 import com.sjl.fund.R
 import com.sjl.fund.adapter.SectorFlowAdapter
 import com.sjl.fund.entity.SectorFlowData
+import com.sjl.fund.util.PageLoading
 import kotlinx.android.synthetic.main.sector_flow_activity.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -31,6 +32,9 @@ class SectorFlowActivity : BaseViewModelActivity<SectorFlowViewModel>() {
     override fun providerVMClass(): Class<SectorFlowViewModel>? = SectorFlowViewModel::class.java
 
     private var sectorAdapter: SectorFlowAdapter? = null
+
+    // 页面加载 loading（统一封装，复用 PageLoading）
+    private val pageLoading by lazy { PageLoading(this) }
 
     override fun initView() {
         // 返回
@@ -63,7 +67,7 @@ class SectorFlowActivity : BaseViewModelActivity<SectorFlowViewModel>() {
     }
 
     override fun initData() {
-        // 默认加载第一个 Tab：行业
+        // 默认加载第一个 Tab：行业（ready()/startObserve 先于 initData 执行，订阅已建立后才发起加载）
         viewModel.dispatch(SectorFlowIntent.LoadSectorData("行业"))
     }
 
@@ -165,25 +169,34 @@ class SectorFlowActivity : BaseViewModelActivity<SectorFlowViewModel>() {
     }
 
     override fun startObserve() {
-        lifecycleScope.launch {
+        // 推迟到 RESUMED（窗口首帧可绘制）后再订阅：若在 onCreate 阶段立即 collect，
+        // StateFlow 的 loading 态会在首帧绘制前就被消费并 show，网络稍快时 hide()
+        // 也先于首帧执行，导致首次进入看不到 loading（点 Tab 时窗口早已绘制过故正常）
+        lifecycleScope.launchWhenResumed {
             viewModel.viewState.collect { state ->
-                when (state) {
-                    is SectorFlowUiState.LoadSuccess -> {
-                        val top = if (!viewModel.isAscending) {
-                            state.data
-                        } else {
-                            state.data.reversed()
-                        }
-                        sectorAdapter?.setNewInstance(top.toMutableList())
-                        updateChart(state.data)
+                // 加载状态：开始显示 loading，数据返回/失败后隐藏（与 UsStockActivity 一致）
+                if (state.loading) {
+                    pageLoading.show()
+                    return@collect
+                }
+                pageLoading.hide()
+                if (state.error != null) {
+                    Toast.makeText(
+                        this@SectorFlowActivity,
+                        "加载失败：${state.error}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@collect
+                }
+                // 列表 + 柱状图的重渲染推迟到 loading 收起后的下一帧，避免与 loading 动画抢占主线程
+                rv_sector.post {
+                    val top = if (!viewModel.isAscending) {
+                        state.data
+                    } else {
+                        state.data.reversed()
                     }
-                    is SectorFlowUiState.LoadError -> {
-                        Toast.makeText(
-                            this@SectorFlowActivity,
-                            "加载失败：${state.error.message}",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                    sectorAdapter?.setNewInstance(top.toMutableList())
+                    updateChart(state.data)
                 }
             }
         }

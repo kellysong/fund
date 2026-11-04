@@ -7,6 +7,7 @@ import com.sjl.core.mvvm.BaseViewModelActivity
 import com.sjl.fund.R
 import com.sjl.fund.adapter.UsIndexAdapter
 import com.sjl.fund.adapter.UsSectorAdapter
+import com.sjl.fund.util.PageLoading
 import kotlinx.android.synthetic.main.us_stock_activity.*
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -25,6 +26,9 @@ class UsStockActivity : BaseViewModelActivity<UsStockViewModel>() {
 
     private var indexAdapter: UsIndexAdapter? = null
     private var sectorAdapter: UsSectorAdapter? = null
+
+    // 页面加载 loading（统一封装，复用 PageLoading）
+    private val pageLoading by lazy { PageLoading(this) }
 
     override fun initView() {
         // 返回
@@ -55,11 +59,22 @@ class UsStockActivity : BaseViewModelActivity<UsStockViewModel>() {
     }
 
     override fun initData() {
+        // 首屏加载：ready()/startObserve 先于 initData 执行，订阅已建立后才发起加载
+        viewModel.dispatch(UsStockIntent.LoadData)
     }
 
     override fun startObserve() {
-        lifecycleScope.launch {
+        // 与 SectorFlowActivity 一致：推迟到 RESUMED（窗口首帧可绘制）后订阅，
+        // 避免首屏 loading 在首帧绘制前被消费/收起而不可见（不再靠接口慢侥幸）
+        lifecycleScope.launchWhenResumed {
             viewModel.viewState.collect { state ->
+                // 加载状态：开始显示 loading，数据返回/失败后隐藏
+                if (state.loading) {
+                    pageLoading.show()
+                    // loading 态不重设列表：旧数据继续展示，避免无意义的全量刷新闪烁
+                    return@collect
+                }
+                pageLoading.hide()
                 indexAdapter?.setNewInstance(state.indexes)
                 sectorAdapter?.setNewInstance(state.sectors)
             }
