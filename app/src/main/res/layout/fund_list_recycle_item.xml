@@ -1,11 +1,14 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@android:color/white"
     android:orientation="vertical"
-    android:padding="@dimen/dp_2">
+    android:paddingTop="@dimen/dp_2"
+    android:paddingBottom="@dimen/dp_2"
+    android:paddingLeft="@dimen/dp_5"
+    android:paddingRight="@dimen/dp_5">
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -25,7 +28,7 @@
                 android:textColor="@color/black"
                 android:ellipsize="middle"
                 android:gravity="left"
-                android:textSize="@dimen/sp_15"
+                android:textSize="@dimen/sp_14"
                 tools:text="白酒" />
 
             <TextView
@@ -34,7 +37,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginRight="@dimen/dp_10"
                 android:gravity="right"
-                android:textSize="@dimen/sp_13"
+                android:textSize="@dimen/sp_12"
                 tools:text="123456" />
         </LinearLayout>
 
@@ -134,7 +137,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginLeft="@dimen/dp_40"
                     android:layout_weight="1"
-                    android:textSize="@dimen/sp_16"
+                    android:textSize="@dimen/sp_14"
                     android:textColor="@android:color/holo_red_light"
                     tools:text="100.0" />
 
@@ -144,13 +147,9 @@
                     android:layout_height="wrap_content"
                     android:layout_marginRight="@dimen/dp_10"
                     android:textColor="@color/colorPrimary"
-                    android:textSize="@dimen/sp_14"
+                    android:textSize="@dimen/sp_12"
                     android:text="持有" />
             </LinearLayout>
         </LinearLayout>
     </RelativeLayout>
-    <View
-        android:layout_width="match_parent"
-        android:background="@color/gray_300"
-        android:layout_height="@dimen/dp_0_5"/>
-</LinearLayout>
+    </LinearLayout>

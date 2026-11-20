@@ -269,6 +269,10 @@ public static java.lang.String TABLENAME;
 -keep class com.google.gson.reflect.TypeToken { *; }
 -keep class * extends com.google.gson.reflect.TypeToken
 
+## Room（AGP8/R8 下避免反射退化）
+-keep class * extends androidx.room.RoomDatabase
+-dontwarn androidx.room.**
+
 #第三方集成
 
 

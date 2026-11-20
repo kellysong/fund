@@ -1,4 +1,4 @@
-package com.sjl.fund.adapter
+﻿package com.sjl.fund.adapter
 
 import android.graphics.Color
 import android.text.TextUtils

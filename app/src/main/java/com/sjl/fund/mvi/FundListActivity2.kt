@@ -3,9 +3,7 @@ package com.sjl.fund.mvi
 import android.animation.ValueAnimator
 import android.app.Dialog
 import android.content.Intent
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.drawable.ColorDrawable
 import android.net.Uri
 import android.os.Build
@@ -118,10 +116,10 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             }
         }
 
-        recycleView.adapter = createAdapter
+        // 侧滑菜单（编辑/删除）必须在 setAdapter 之前设置
+        setupSwipeMenu()
 
-        // 设置侧滑删除
-        setupSwipeToDelete()
+        recycleView.adapter = createAdapter
 
         // 初始化指数水平滚动列表
         initIndexRecyclerView()
@@ -139,6 +137,46 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         iv_us_stock.setOnClickListener {
             val intent = Intent(this@FundListActivity2, UsStockActivity::class.java)
             startActivity(intent)
+        }
+    }
+
+    /**
+     * 侧滑菜单：编辑 / 删除（SwipeRecyclerView 原生菜单）
+     */
+    private fun setupSwipeMenu() {
+        recycleView.setSwipeMenuCreator { _, rightMenu, position ->
+            // 加载更多 footer（如"没有更多数据"）不是基金数据，不创建侧滑菜单
+            if (position >= (createAdapter?.data?.size ?: 0)) {
+                return@setSwipeMenuCreator
+            }
+            // 编辑按钮
+            val editItem = com.yanzhenjie.recyclerview.SwipeMenuItem(this)
+                .setWidth((80 * resources.displayMetrics.density).toInt())
+                .setHeight(ViewGroup.LayoutParams.MATCH_PARENT)
+                .setBackgroundColor(Color.parseColor("#FF9800"))
+                .setText("编辑")
+                .setTextColor(Color.WHITE)
+                .setTextSize(16)
+            rightMenu.addMenuItem(editItem)
+
+            // 删除按钮
+            val deleteItem = com.yanzhenjie.recyclerview.SwipeMenuItem(this)
+                .setWidth((80 * resources.displayMetrics.density).toInt())
+                .setHeight(ViewGroup.LayoutParams.MATCH_PARENT)
+                .setBackgroundColor(Color.parseColor("#FF4444"))
+                .setText("删除")
+                .setTextColor(Color.WHITE)
+                .setTextSize(16)
+            rightMenu.addMenuItem(deleteItem)
+        }
+
+        recycleView.setOnItemMenuClickListener { menuBridge, adapterPosition ->
+            menuBridge.closeMenu()
+            val fundInfo = createAdapter?.data?.getOrNull(adapterPosition) ?: return@setOnItemMenuClickListener
+            when (menuBridge.position) {
+                0 -> showEditDialog(fundInfo)
+                1 -> showDeleteConfirmDialog(fundInfo, adapterPosition)
+            }
         }
     }
 
@@ -167,74 +205,6 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         })
     }
 
-    /**
-     * 设置侧滑删除功能
-     */
-    private fun setupSwipeToDelete() {
-        val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(
-            0, // 不支持拖拽，让draggableModule处理
-            ItemTouchHelper.LEFT // 只支持向左滑动删除
-        ) {
-            override fun onMove(
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
-                target: RecyclerView.ViewHolder
-            ): Boolean {
-                return false
-            }
-
-            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
-                val position = viewHolder.adapterPosition
-                if (position != RecyclerView.NO_POSITION) {
-                    val fundInfo = createAdapter?.data?.get(position)
-                    if (fundInfo != null) {
-                        showDeleteConfirmDialog(fundInfo, position)
-                    }
-                }
-            }
-
-            override fun onChildDraw(
-                c: Canvas,
-                recyclerView: RecyclerView,
-                viewHolder: RecyclerView.ViewHolder,
-                dX: Float,
-                dY: Float,
-                actionState: Int,
-                isCurrentlyActive: Boolean
-            ) {
-                if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
-                    val itemView = viewHolder.itemView
-                    val itemHeight = itemView.bottom - itemView.top
-
-                    // 绘制红色背景
-                    val background = Paint().apply {
-                        color = Color.parseColor("#FF4444")
-                    }
-                    c.drawRect(
-                        itemView.right.toFloat() + dX,
-                        itemView.top.toFloat(),
-                        itemView.right.toFloat(),
-                        itemView.bottom.toFloat(),
-                        background
-                    )
-
-                    // 绘制删除文字
-                    val deleteText = "删除"
-                    val textPaint = Paint().apply {
-                        color = Color.WHITE
-                        textSize = 48f
-                        isAntiAlias = true
-                        textAlign = Paint.Align.CENTER
-                    }
-                    val textX = itemView.right.toFloat() + dX / 2
-                    val textY = itemView.top.toFloat() + itemHeight / 2 - (textPaint.descent() + textPaint.ascent()) / 2
-                    c.drawText(deleteText, textX, textY, textPaint)
-                }
-                super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive)
-            }
-        })
-        itemTouchHelper.attachToRecyclerView(recycleView)
-    }
 
     /**
      * 显示删除确认对话框（优化版）
@@ -242,7 +212,8 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
     private fun showDeleteConfirmDialog(fundInfo: FundInfo, position: Int) {
         val contentView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(40, 40, 40, 24)
+            val dp0 = (20 * resources.displayMetrics.density).toInt()
+            setPadding(dp0, dp0, dp0, dp0)
             setBackgroundResource(R.drawable.bg_dialog_rounded)
         }
 
@@ -262,10 +233,11 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
         }
         contentView.addView(msgText)
 
+        val dp = { value: Int -> (value * resources.displayMetrics.density).toInt() }
         val btnLayout = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = android.view.Gravity.END
-            setPadding(0, 32, 0, 0)
+            setPadding(0, dp(20), 0, 0)
         }
 
         val dialog = Dialog(this).apply {
@@ -279,7 +251,11 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             text = "取消"
             textSize = 14f
             setTextColor(Color.parseColor("#999999"))
-            setPadding(32, 16, 32, 16)
+            gravity = android.view.Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, dp(36)
+            )
+            setPadding(dp(16), 0, dp(16), 0)
             setOnClickListener {
                 dialog.dismiss()
                 createAdapter?.notifyItemChanged(position)
@@ -290,8 +266,12 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             text = "删除"
             textSize = 14f
             setTextColor(Color.WHITE)
-            setBackgroundColor(Color.parseColor("#1677FF"))
-            setPadding(40, 16, 40, 16)
+            setBackgroundResource(R.drawable.bg_confirm_button)
+            gravity = android.view.Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT, dp(36)
+            ).apply { setMargins(dp(12), 0, 0, 0) }
+            setPadding(dp(20), 0, dp(20), 0)
             setOnClickListener {
                 viewModel.dispatch(FundListIntent.DeleteFund(fundInfo.fundcode))
                 createAdapter?.removeAt(position)
@@ -318,23 +298,13 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
             viewModel.dispatch(FundListIntent.LoadIndexData)
         }
 
-        // 列表点击进入详情
-        createAdapter?.apply {
-            setOnItemClickListener { adapter, view, position ->
-                val temp = createAdapter!!.data[position]
-                val intent = Intent(this@FundListActivity2, FundDetailActivity::class.java)
-                intent.putExtra(FundDetailActivity.EXTRA_FUND_CODE, temp.fundcode)
-                intent.putExtra(FundDetailActivity.EXTRA_FUND_NAME, temp.name)
-                startActivity(intent)
-            }
-
-            // 点击名称编辑
-            setOnItemChildClickListener { adapter, view, position ->
-                val temp = createAdapter!!.data[position]
-                if (view.id == R.id.tv_name) {
-                    showEditDialog(temp)
-                }
-            }
+        // 列表点击进入详情（编辑/删除走侧滑菜单）
+        createAdapter?.setOnItemClickListener { adapter, view, position ->
+            val temp = createAdapter!!.data[position]
+            val intent = Intent(this@FundListActivity2, FundDetailActivity::class.java)
+            intent.putExtra(FundDetailActivity.EXTRA_FUND_CODE, temp.fundcode)
+            intent.putExtra(FundDetailActivity.EXTRA_FUND_NAME, temp.name)
+            startActivity(intent)
         }
 
         // 添加按钮
@@ -451,7 +421,8 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
     private fun showImportCategoryDialog(uri: Uri) {
         val contentView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(40, 40, 40, 24)
+            val dp0 = (20 * resources.displayMetrics.density).toInt()
+            setPadding(dp0, dp0, dp0, dp0)
             setBackgroundResource(R.drawable.bg_dialog_rounded)
         }
 
@@ -853,7 +824,8 @@ class FundListActivity2 : BaseViewModelActivity<FundListViewModel2>() {
     private fun showAlertDialog(title: String, message: String) {
         val contentView = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(40, 40, 40, 24)
+            val dp0 = (20 * resources.displayMetrics.density).toInt()
+            setPadding(dp0, dp0, dp0, dp0)
             setBackgroundResource(R.drawable.bg_dialog_rounded)
         }
 

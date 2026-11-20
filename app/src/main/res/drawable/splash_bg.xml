@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  冷启动启动图（AppTheme.Launcher 的 windowBackground）：
+  Android 12+ 系统闪屏内容透明，透出这一层。
+  用 layer-list：纯色底 + 居中的 PNG logo。
+  注意：shape 内不要写 padding/size，否则 PhoneWindow 会把 padding
+  复制给内容根布局导致 logo 位置错乱；用 <item android:top> 定位即可。
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 纯色底 -->
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFF" />
+        </shape>
+    </item>
+    <!-- logo：顶部 80dp、水平居中 -->
+    <item android:top="@dimen/dp_80">
+        <bitmap
+            android:gravity="top|center_horizontal"
+            android:src="@drawable/ic_app_logo" />
+    </item>
+</layer-list>
